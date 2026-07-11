@@ -4,7 +4,7 @@ const User = require("../models/User");
 const registerUser = async (req, res) => {
     try {
         const { fullName, email, password, phone, role } = req.body;
-        
+
 
         // Basic Validation
         if (!fullName || !email || !password || !phone || !role) {
