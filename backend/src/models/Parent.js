@@ -20,6 +20,15 @@ const parentSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    
+    bloodGroup: {
+      type: String,
+    },
+
+    dateOfBirth: {
+      type: Date,
+    },
+
   },
   {
     timestamps: true,
