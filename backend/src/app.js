@@ -1,5 +1,7 @@
 const express = require("express");
 const parentRoutes = require("./routes/parentRoutes");
+const carePlanRoutes = require("./routes/carePlanRoutes");
+const appointmentRoutes = require("./routes/appointmentRoutes");
 
 
 const authRoutes = require("./routes/authRoutes");
@@ -23,5 +25,7 @@ app.get("/api/health", (req, res) => {
 // Register auth routes
 app.use("/api/auth", authRoutes);
 app.use("/api/parents", parentRoutes);
+app.use("/api/care-plans", carePlanRoutes);
+app.use("/api/appointments", appointmentRoutes);
 
 module.exports = app;
