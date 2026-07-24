@@ -1,12 +1,19 @@
 const express = require("express");
+const cors = require("cors");
+
 const parentRoutes = require("./routes/parentRoutes");
 const carePlanRoutes = require("./routes/carePlanRoutes");
 const appointmentRoutes = require("./routes/appointmentRoutes");
-
-
 const authRoutes = require("./routes/authRoutes");
 
 const app = express();
+
+// Allow frontend to communicate with backend
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+  })
+);
 
 // Parse JSON request body
 app.use(express.json());
