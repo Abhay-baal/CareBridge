@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 import AppLayout from "@/components/layout/AppLayout";
 import WelcomeHeader from "@/components/dashboard/WelcomeHeader";
@@ -24,10 +25,8 @@ export default function DashboardPage() {
 
   // Appointment State
   const [appointment, setAppointment] = useState(null);
-  const [appointmentLoading, setAppointmentLoading] =
-    useState(true);
-  const [appointmentError, setAppointmentError] =
-    useState("");
+  const [appointmentLoading, setAppointmentLoading] = useState(true);
+  const [appointmentError, setAppointmentError] = useState("");
 
   // Fetch Care Plans
   const loadCarePlans = async () => {
@@ -39,10 +38,7 @@ export default function DashboardPage() {
 
       setCarePlans(response.data || []);
     } catch (error) {
-      console.error(
-        "Failed to load care plans:",
-        error
-      );
+      console.error("Failed to load care plans:", error);
 
       setCarePlanError(
         "Unable to load today's care plan."
@@ -73,14 +69,9 @@ export default function DashboardPage() {
             new Date(b.appointmentDate)
         )[0];
 
-      setAppointment(
-        upcomingAppointment || null
-      );
+      setAppointment(upcomingAppointment || null);
     } catch (error) {
-      console.error(
-        "Failed to load appointments:",
-        error
-      );
+      console.error("Failed to load appointments:", error);
 
       setAppointmentError(
         "Unable to load upcoming appointment."
@@ -93,7 +84,10 @@ export default function DashboardPage() {
   // Load Dashboard Data
   useEffect(() => {
     const fetchDashboardData = async () => {
-      await Promise.all([loadCarePlans(), loadAppointments()]);
+      await Promise.all([
+        loadCarePlans(),
+        loadAppointments(),
+      ]);
     };
 
     fetchDashboardData();
@@ -101,30 +95,30 @@ export default function DashboardPage() {
 
   // Update Care Plan
   const handleCarePlanUpdate = async (carePlan) => {
-  try {
-    setCarePlanError("");
+    try {
+      setCarePlanError("");
 
-    const newStatus =
-      carePlan.status === "completed"
-        ? "pending"
-        : "completed";
+      const newStatus =
+        carePlan.status === "completed"
+          ? "pending"
+          : "completed";
 
-    await updateCarePlan(carePlan._id, {
-      status: newStatus,
-    });
+      await updateCarePlan(carePlan._id, {
+        status: newStatus,
+      });
 
-    await loadCarePlans();
-  } catch (error) {
-    console.error(
-      "Failed to update care plan:",
-      error
-    );
+      await loadCarePlans();
+    } catch (error) {
+      console.error(
+        "Failed to update care plan:",
+        error
+      );
 
-    setCarePlanError(
-      "Unable to update care plan."
-    );
-  }
-};
+      setCarePlanError(
+        "Unable to update care plan."
+      );
+    }
+  };
 
   // Progress Calculation
   const completedTasks = carePlans.filter(
@@ -143,6 +137,45 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <WelcomeHeader name="Abhybir" />
+
+      {/* Quick Actions */}
+      <section className="mt-6">
+        <h2 className="mb-3 text-lg font-semibold text-gray-900">
+          Quick Actions
+        </h2>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Link
+            href="/location"
+            className="rounded-xl border bg-white p-4 shadow-sm transition hover:shadow-md active:scale-[0.98]"
+          >
+            <div className="text-2xl">📍</div>
+
+            <h3 className="mt-2 font-semibold text-gray-900">
+              Parent Location
+            </h3>
+
+            <p className="mt-1 text-xs text-gray-500">
+              View current location
+            </p>
+          </Link>
+
+          <Link
+            href="/emergency-contacts"
+            className="rounded-xl border bg-white p-4 shadow-sm transition hover:shadow-md active:scale-[0.98]"
+          >
+            <div className="text-2xl">🚨</div>
+
+            <h3 className="mt-2 font-semibold text-gray-900">
+              Emergency
+            </h3>
+
+            <p className="mt-1 text-xs text-gray-500">
+              Contact trusted people
+            </p>
+          </Link>
+        </div>
+      </section>
 
       {/* Today's Care Plan */}
       <section className="mt-6">

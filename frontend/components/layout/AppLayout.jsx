@@ -1,4 +1,8 @@
+"use client";
+
 import BottomNavigation from "@/components/dashboard/BottomNavigation";
+import FloatingActionButton from "@/components/emergency/FloatingActionButton";
+import { Phone, TriangleAlert } from "lucide-react";
 
 export default function AppLayout({ children }) {
   return (
@@ -8,6 +12,20 @@ export default function AppLayout({ children }) {
       </div>
 
       <BottomNavigation />
+
+      <FloatingActionButton
+        icon={<Phone size={24} />}
+        position="right"
+        color="bg-green-600"
+        onClick={() => alert("Call Child")}
+      />
+
+      <FloatingActionButton
+        icon={<TriangleAlert size={24} />}
+        position="left"
+        color="bg-red-600"
+        onClick={() => alert("Emergency")}
+      />
     </main>
   );
 }
