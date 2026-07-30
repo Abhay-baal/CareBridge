@@ -1,22 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getChildDashboard } from "@/services/childService";
 
 export default function ParentDetailsPage() {
   const [parent, setParent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    async function loadParent() {
+    const loadParent = async () => {
       try {
-        // Existing Parent Profile API will be connected later.
-        setParent(null);
+        const response = await getChildDashboard();
+        setParent(response.data?.parent);
       } catch (error) {
-        console.error("Failed to load parent:", error);
+        console.error(error);
+        setError(
+          error.response?.data?.message ||
+            "Failed to load parent details"
+        );
       } finally {
         setLoading(false);
       }
-    }
+    };
 
     loadParent();
   }, []);
@@ -25,11 +31,46 @@ export default function ParentDetailsPage() {
     return (
       <main className="min-h-screen bg-gray-50 p-4">
         <div className="mx-auto max-w-md">
-          <p className="text-sm text-gray-500">Loading parent details...</p>
+          <p className="text-sm text-gray-500">
+            Loading parent details...
+          </p>
         </div>
       </main>
     );
   }
+
+  if (error) {
+    return (
+      <main className="min-h-screen bg-gray-50 p-4">
+        <div className="mx-auto max-w-md">
+          <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <p className="font-medium text-red-600">{error}</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  const user = parent?.user;
+
+  const calculateAge = (dob) => {
+    if (!dob) return "N/A";
+
+    const birthDate = new Date(dob);
+    const today = new Date();
+
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const month = today.getMonth() - birthDate.getMonth();
+
+    if (
+      month < 0 ||
+      (month === 0 && today.getDate() < birthDate.getDate())
+    ) {
+      age--;
+    }
+
+    return age;
+  };
 
   return (
     <main className="min-h-screen bg-gray-50 p-4">
@@ -38,34 +79,33 @@ export default function ParentDetailsPage() {
           Parent Details
         </h1>
 
-        {!parent ? (
-          <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">
-              Parent details will appear here.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {[
-              ["Name", parent.fullName],
-              ["Age", parent.age],
-              ["Blood Group", parent.bloodGroup],
-              ["Date of Birth", parent.dateOfBirth],
-              ["Phone", parent.phone],
-              ["Address", parent.address],
-            ].map(([label, value]) => (
-              <div
-                key={label}
-                className="rounded-2xl bg-white p-4 shadow-sm"
-              >
-                <p className="text-xs text-gray-500">{label}</p>
-                <p className="mt-1 font-medium text-gray-900">
-                  {value || "N/A"}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="space-y-3">
+          {[
+            ["Name", user?.fullName],
+            ["Age", calculateAge(parent?.dateOfBirth)],
+            ["Blood Group", parent?.bloodGroup],
+            [
+              "Date of Birth",
+              parent?.dateOfBirth
+                ? new Date(parent.dateOfBirth).toLocaleDateString()
+                : null,
+            ],
+            ["Phone", user?.phone],
+            ["Email", user?.email],
+            ["Address", parent?.address],
+            ["Emergency Contact", parent?.emergencyContact],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="rounded-2xl bg-white p-4 shadow-sm"
+            >
+              <p className="text-xs text-gray-500">{label}</p>
+              <p className="mt-1 font-medium text-gray-900">
+                {value || "N/A"}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
     </main>
   );
