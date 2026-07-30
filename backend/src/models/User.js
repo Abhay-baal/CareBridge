@@ -33,6 +33,12 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
+    parent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
     isVerified: {
       type: Boolean,
       default: false,

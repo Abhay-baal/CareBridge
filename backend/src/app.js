@@ -5,17 +5,18 @@ const parentRoutes = require("./routes/parentRoutes");
 const carePlanRoutes = require("./routes/carePlanRoutes");
 const appointmentRoutes = require("./routes/appointmentRoutes");
 const authRoutes = require("./routes/authRoutes");
+const childRoutes = require("./routes/childRoutes");
+const emergencyRoutes = require("./routes/emergencyRoutes");
+const locationRoutes = require("./routes/locationRoutes");
 
 const app = express();
 
-// Allow frontend to communicate with backend
 app.use(
   cors({
     origin: "http://localhost:3000",
   })
 );
 
-// Parse JSON request body
 app.use(express.json());
 
 app.get("/", (req, res) => {
@@ -29,10 +30,13 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Register auth routes
 app.use("/api/auth", authRoutes);
 app.use("/api/parents", parentRoutes);
 app.use("/api/care-plans", carePlanRoutes);
 app.use("/api/appointments", appointmentRoutes);
+
+app.use("/api/child", childRoutes);
+app.use("/api/emergency", emergencyRoutes);
+app.use("/api/location", locationRoutes);
 
 module.exports = app;

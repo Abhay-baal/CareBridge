@@ -3,81 +3,113 @@ const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 
 const registerUser = async (req, res) => {
-    try {
-        const { fullName, email, password, phone, role } = req.body;
+  try {
+    const {
+      fullName,
+      email,
+      password,
+      phone,
+      role,
+      parentId,
+    } = req.body;
 
-
-        // Basic Validation
-        if (!fullName || !email || !password || !phone || !role) {
-            return res.status(400).json({
-                success: false,
-                message: "All fields are required",
-            });
-        }
-        const normalizedEmail = email.toLowerCase();
-
-        if (password.length < 8) {
-            return res.status(400).json({
-                success: false,
-                message: "Password must be at least 8 characters long",
-            });
-        }
-
-        const phoneRegex = /^\d{10}$/;
-
-        if (!phoneRegex.test(phone)) {
-            return res.status(400).json({
-                success: false,
-                message: "Phone number must be exactly 10 digits",
-            });
-        }
-
-        // Check Existing User
-        const existingUser = await User.findOne({
-            email: normalizedEmail,
-        });
-
-
-        if (existingUser) {
-            return res.status(400).json({
-                success: false,
-                message: "Email already exists",
-            });
-        }
-
-        // Hash Password
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Save User
-        const user = await User.create({
-            fullName,
-            email: normalizedEmail,
-            password: hashedPassword,
-            phone,
-            role,
-        });
-
-        res.status(201).json({
-            success: true,
-            message: "User registered successfully",
-            data: {
-                id: user._id,
-                fullName: user.fullName,
-                email: user.email,
-                role: user.role,
-            },
-        });
-    } catch (error) {
-        console.error(error);
-
-        res.status(500).json({
-            success: false,
-            message: "Server Error",
-        });
+    if (!fullName || !email || !password || !phone || !role) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
     }
+
+    if (!["parent", "child"].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid role",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase();
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters long",
+      });
+    }
+
+    const phoneRegex = /^\d{10}$/;
+
+    if (!phoneRegex.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number must be exactly 10 digits",
+      });
+    }
+
+    const existingUser = await User.findOne({
+      email: normalizedEmail,
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already exists",
+      });
+    }
+
+    let parent = null;
+
+    if (role === "child") {
+      if (!parentId) {
+        return res.status(400).json({
+          success: false,
+          message: "parentId is required for child registration",
+        });
+      }
+
+      parent = await User.findOne({
+        _id: parentId,
+        role: "parent",
+      });
+
+      if (!parent) {
+        return res.status(404).json({
+          success: false,
+          message: "Parent account not found",
+        });
+      }
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      fullName,
+      email: normalizedEmail,
+      password: hashedPassword,
+      phone,
+      role,
+      parent: parent?._id || null,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "User registered successfully",
+      data: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+        parent: user.parent,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
 };
-
-
 
 const loginUser = async (req, res) => {
   try {
@@ -117,6 +149,7 @@ const loginUser = async (req, res) => {
       {
         id: user._id,
         role: user.role,
+        parent: user.parent || null,
       },
       process.env.JWT_SECRET,
       {
@@ -133,6 +166,7 @@ const loginUser = async (req, res) => {
         fullName: user.fullName,
         email: user.email,
         role: user.role,
+        parent: user.parent || null,
       },
     });
   } catch (error) {
