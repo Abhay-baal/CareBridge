@@ -8,28 +8,48 @@ import AppLayout from "@/components/layout/AppLayout";
 import WelcomeHeader from "@/components/dashboard/WelcomeHeader";
 import CarePlanList from "@/components/dashboard/CarePlanList";
 import AppointmentCard from "@/components/dashboard/AppointmentCard";
+import LoadingState from "@/components/ui/LoadingState";
 
 import {
   getCarePlans,
   updateCarePlan,
 } from "@/services/carePlanService";
 
-import {
-  getAppointments,
-} from "@/services/appointmentService";
+import { getAppointments } from "@/services/appointmentService";
+import { getParentProfile } from "@/services/parentService";
 
 export default function DashboardPage() {
-  // Care Plan State
+  const [parent, setParent] = useState(null);
+
   const [carePlans, setCarePlans] = useState([]);
   const [carePlanLoading, setCarePlanLoading] = useState(true);
   const [carePlanError, setCarePlanError] = useState("");
 
-  // Appointment State
   const [appointment, setAppointment] = useState(null);
   const [appointmentLoading, setAppointmentLoading] = useState(true);
   const [appointmentError, setAppointmentError] = useState("");
 
-  // Fetch Care Plans
+  const [profileLoading, setProfileLoading] = useState(true);
+
+  const loadProfile = async () => {
+    try {
+      setProfileLoading(true);
+
+      const response = await getParentProfile();
+
+      setParent(response.data || null);
+    } catch (error) {
+      console.error("Failed to load profile:", error);
+
+      toast.error(
+        error.response?.data?.message ||
+          "Unable to load your profile."
+      );
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
   const loadCarePlans = async () => {
     try {
       setCarePlanLoading(true);
@@ -49,7 +69,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Fetch Appointments
   const loadAppointments = async () => {
     try {
       setAppointmentLoading(true);
@@ -59,10 +78,13 @@ export default function DashboardPage() {
 
       const appointments = response.data || [];
 
+      const now = new Date();
+
       const upcomingAppointment = appointments
         .filter(
           (item) =>
-            new Date(item.appointmentDate) >= new Date()
+            item.status !== "cancelled" &&
+            new Date(item.appointmentDate) >= now
         )
         .sort(
           (a, b) =>
@@ -82,19 +104,12 @@ export default function DashboardPage() {
     }
   };
 
-  // Load Dashboard Data
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      await Promise.all([
-        loadCarePlans(),
-        loadAppointments(),
-      ]);
-    };
-
-    fetchDashboardData();
+    loadProfile();
+    loadCarePlans();
+    loadAppointments();
   }, []);
 
-  // Update Care Plan
   const handleCarePlanUpdate = async (carePlan) => {
     try {
       setCarePlanError("");
@@ -131,7 +146,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Progress Calculation
   const completedTasks = carePlans.filter(
     (task) => task.status === "completed"
   ).length;
@@ -145,11 +159,23 @@ export default function DashboardPage() {
         )
       : 0;
 
+  if (profileLoading) {
+    return (
+      <AppLayout>
+        <LoadingState message="Loading your dashboard..." />
+      </AppLayout>
+    );
+  }
+
+  const parentName =
+    parent?.user?.fullName ||
+    parent?.fullName ||
+    "Parent";
+
   return (
     <AppLayout>
-      <WelcomeHeader name="Abhybir" />
+      <WelcomeHeader name={parentName} />
 
-      {/* Quick Actions */}
       <section className="mt-6">
         <h2 className="mb-3 text-lg font-semibold text-gray-900">
           Quick Actions
@@ -188,7 +214,6 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Today's Care Plan */}
       <section className="mt-6">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">
@@ -208,7 +233,6 @@ export default function DashboardPage() {
         />
       </section>
 
-      {/* Today's Progress */}
       <section className="mt-6 rounded-xl bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-gray-900">
@@ -223,9 +247,7 @@ export default function DashboardPage() {
         <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-200">
           <div
             className="h-full rounded-full bg-gray-900 transition-all duration-300"
-            style={{
-              width: `${progress}%`,
-            }}
+            style={{ width: `${progress}%` }}
           />
         </div>
 
@@ -234,7 +256,6 @@ export default function DashboardPage() {
         </p>
       </section>
 
-      {/* Upcoming Appointment */}
       <section className="mt-6">
         <AppointmentCard
           appointment={appointment}

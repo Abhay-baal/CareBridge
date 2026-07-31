@@ -5,20 +5,26 @@ export default function StatsGrid({
   reports = 0,
 }) {
   const stats = [
-    ["Total Tasks", totalTasks],
-    ["Completed", completedTasks],
-    ["Appointments", appointments],
-    ["Health Reports", reports],
+    ["📋", "Total Tasks", totalTasks],
+    ["✅", "Completed", completedTasks],
+    ["📅", "Appointments", appointments],
+    ["📄", "Health Reports", reports],
   ];
 
   return (
     <div className="grid grid-cols-2 gap-3">
-      {stats.map(([label, value]) => (
+      {stats.map(([icon, label, value]) => (
         <div
           key={label}
-          className="rounded-2xl bg-white p-4 shadow-sm"
+          className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition duration-200 hover:shadow-md"
         >
-          <p className="text-xs text-gray-500">{label}</p>
+          <div className="flex items-center gap-2">
+            <span className="text-base">{icon}</span>
+            <p className="text-xs font-medium text-gray-500">
+              {label}
+            </p>
+          </div>
+
           <p className="mt-2 text-2xl font-bold text-gray-900">
             {value}
           </p>

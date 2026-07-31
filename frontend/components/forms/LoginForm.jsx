@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 import { loginUser } from "../../services/authService";
@@ -53,6 +54,8 @@ export default function LoginForm() {
 
       console.log("Login successful:", data);
 
+      toast.success("Login successful!");
+
       if (data.token) {
         localStorage.setItem("token", data.token);
       }
@@ -61,10 +64,12 @@ export default function LoginForm() {
     } catch (error) {
       console.error("Login failed:", error);
 
-      setServerError(
+      const message =
         error.response?.data?.message ||
-          "Login failed. Please check your email and password."
-      );
+        "Login failed. Please check your email and password.";
+
+      setServerError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
