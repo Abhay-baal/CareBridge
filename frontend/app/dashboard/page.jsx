@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import Link from "next/link";
 
 import AppLayout from "@/components/layout/AppLayout";
@@ -107,6 +108,12 @@ export default function DashboardPage() {
         status: newStatus,
       });
 
+      toast.success(
+        newStatus === "completed"
+          ? "Task completed successfully."
+          : "Task marked as pending."
+      );
+
       await loadCarePlans();
     } catch (error) {
       console.error(
@@ -116,6 +123,10 @@ export default function DashboardPage() {
 
       setCarePlanError(
         "Unable to update care plan."
+      );
+
+      toast.error(
+        "Something went wrong. Please try again."
       );
     }
   };

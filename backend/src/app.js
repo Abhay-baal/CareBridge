@@ -8,6 +8,7 @@ const authRoutes = require("./routes/authRoutes");
 const childRoutes = require("./routes/childRoutes");
 const emergencyRoutes = require("./routes/emergencyRoutes");
 const locationRoutes = require("./routes/locationRoutes");
+const healthRecordRoutes = require("./routes/healthRecordRoutes");
 
 const app = express();
 
@@ -38,5 +39,6 @@ app.use("/api/appointments", appointmentRoutes);
 app.use("/api/child", childRoutes);
 app.use("/api/emergency", emergencyRoutes);
 app.use("/api/location", locationRoutes);
+app.use("/api/health-records", healthRecordRoutes);
 
 module.exports = app;

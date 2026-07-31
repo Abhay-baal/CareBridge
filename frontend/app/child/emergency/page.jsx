@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import ContactCard from "@/components/child/ContactCard";
 
 import {
@@ -56,8 +57,10 @@ export default function EmergencyPage() {
 
       if (editingId) {
         await updateEmergencyContact(editingId, form);
+        toast.success("Contact updated successfully.");
       } else {
         await createEmergencyContact(form);
+        toast.success("Contact added successfully.");
       }
 
       setForm({
@@ -76,6 +79,10 @@ export default function EmergencyPage() {
       setError(
         error.response?.data?.message ||
           "Failed to save contact"
+      );
+
+      toast.error(
+        "Something went wrong. Please try again."
       );
     } finally {
       setSaving(false);
@@ -99,6 +106,8 @@ export default function EmergencyPage() {
 
       await deleteEmergencyContact(id);
 
+      toast.success("Contact deleted successfully.");
+
       await loadContacts();
     } catch (error) {
       console.error(error);
@@ -106,6 +115,10 @@ export default function EmergencyPage() {
       setError(
         error.response?.data?.message ||
           "Failed to delete contact"
+      );
+
+      toast.error(
+        "Something went wrong. Please try again."
       );
     }
   };

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 import WelcomeHeader from "@/components/child/WelcomeHeader";
 import ParentSummaryCard from "@/components/child/ParentSummaryCard";
@@ -51,9 +52,19 @@ export default function ChildDashboard() {
 
       await updateChildCarePlan(task._id, newStatus);
 
+      toast.success(
+        newStatus === "completed"
+          ? "Task completed successfully."
+          : "Task marked as pending."
+      );
+
       await loadDashboard();
     } catch (err) {
       console.error("Task update error:", err);
+
+      toast.error(
+        "Something went wrong. Please try again."
+      );
     }
   };
 
