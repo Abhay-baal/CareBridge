@@ -31,7 +31,7 @@ export default function ChildLocationPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gray-50 p-4">
+      <main className="min-h-screen bg-gray-50 p-4 pb-24">
         <div className="mx-auto max-w-md">
           <p className="text-sm text-gray-500">
             Loading location...
@@ -43,7 +43,7 @@ export default function ChildLocationPage() {
 
   if (error) {
     return (
-      <main className="min-h-screen bg-gray-50 p-4">
+      <main className="min-h-screen bg-gray-50 p-4 pb-24">
         <div className="mx-auto max-w-md">
           <div className="rounded-2xl bg-white p-5 shadow-sm">
             <p className="font-medium text-red-600">{error}</p>
@@ -54,7 +54,7 @@ export default function ChildLocationPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 p-4">
+    <main className="min-h-screen bg-gray-50 p-4 pb-24">
       <div className="mx-auto max-w-md">
         <h1 className="text-2xl font-bold text-gray-900">
           Parent Location

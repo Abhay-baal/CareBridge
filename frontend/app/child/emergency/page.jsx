@@ -135,7 +135,7 @@ export default function EmergencyPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 p-4">
+    <main className="min-h-screen bg-gray-50 p-4 pb-24">
       <div className="mx-auto max-w-md">
         <div className="mb-5 flex items-center justify-between">
           <div>

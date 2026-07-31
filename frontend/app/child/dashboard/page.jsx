@@ -9,6 +9,7 @@ import ProgressCard from "@/components/child/ProgressCard";
 import AppointmentCard from "@/components/child/AppointmentCard";
 import TodayTasks from "@/components/child/TodayTasks";
 import StatsGrid from "@/components/child/StatsGrid";
+import LoadingState from "@/components/ui/LoadingState";
 
 import {
   getChildDashboard,
@@ -23,6 +24,7 @@ export default function ChildDashboard() {
   const loadDashboard = async () => {
     try {
       setError("");
+      setLoading(true);
 
       const response = await getChildDashboard();
 
@@ -50,7 +52,10 @@ export default function ChildDashboard() {
           ? "pending"
           : "completed";
 
-      await updateChildCarePlan(task._id, newStatus);
+      await updateChildCarePlan(
+        task._id,
+        newStatus
+      );
 
       toast.success(
         newStatus === "completed"
@@ -70,40 +75,32 @@ export default function ChildDashboard() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gray-50 p-4">
-        <div className="mx-auto max-w-md">
-          <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">
-              Loading child dashboard...
-            </p>
-          </div>
-        </div>
-      </main>
+      <div className="mx-auto max-w-md p-4">
+        <LoadingState message="Loading child dashboard..." />
+      </div>
     );
   }
 
   if (error) {
     return (
-      <main className="min-h-screen bg-gray-50 p-4">
-        <div className="mx-auto max-w-md">
-          <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <h1 className="font-semibold text-red-600">
-              Unable to load dashboard
-            </h1>
+      <div className="mx-auto max-w-md p-4">
+        <div className="rounded-2xl bg-white p-5 shadow-sm">
+          <h1 className="font-semibold text-red-600">
+            Unable to load dashboard
+          </h1>
 
-            <p className="mt-2 text-sm text-gray-500">
-              {error}
-            </p>
+          <p className="mt-2 text-sm text-gray-500">
+            {error}
+          </p>
 
-            <button
-              onClick={loadDashboard}
-              className="mt-4 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white"
-            >
-              Try Again
-            </button>
-          </div>
+          <button
+            onClick={loadDashboard}
+            className="mt-4 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white"
+          >
+            Try Again
+          </button>
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -119,43 +116,39 @@ export default function ChildDashboard() {
     ) || appointments[0];
 
   return (
-    <main className="min-h-screen bg-gray-50 p-4">
-      <div className="mx-auto max-w-md space-y-4 pb-6">
+    <div className="mx-auto max-w-md space-y-4 p-4">
+      <WelcomeHeader
+        parentName={parent?.user?.fullName}
+      />
 
-        <WelcomeHeader
-          parentName={parent?.user?.fullName}
-        />
+      <ParentSummaryCard
+        parent={{
+          fullName: parent?.user?.fullName,
+          bloodGroup: parent?.bloodGroup,
+          healthStatus: "Good",
+        }}
+      />
 
-        <ParentSummaryCard
-          parent={{
-            fullName: parent?.user?.fullName,
-            bloodGroup: parent?.bloodGroup,
-            healthStatus: "Good",
-          }}
-        />
+      <ProgressCard
+        completed={stats.completedTasks || 0}
+        total={stats.totalTasks || 0}
+      />
 
-        <ProgressCard
-          completed={stats.completedTasks || 0}
-          total={stats.totalTasks || 0}
-        />
+      <AppointmentCard
+        appointment={upcomingAppointment}
+      />
 
-        <AppointmentCard
-          appointment={upcomingAppointment}
-        />
+      <StatsGrid
+        totalTasks={stats.totalTasks || 0}
+        completedTasks={stats.completedTasks || 0}
+        appointments={stats.totalAppointments || 0}
+        reports={stats.totalReports || 0}
+      />
 
-        <StatsGrid
-          totalTasks={stats.totalTasks || 0}
-          completedTasks={stats.completedTasks || 0}
-          appointments={stats.totalAppointments || 0}
-          reports={stats.totalReports || 0}
-        />
-
-        <TodayTasks
-          tasks={tasks}
-          onToggle={handleToggleTask}
-        />
-
-      </div>
-    </main>
+      <TodayTasks
+        tasks={tasks}
+        onToggle={handleToggleTask}
+      />
+    </div>
   );
 }

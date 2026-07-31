@@ -47,20 +47,26 @@ export default function LoginForm() {
     try {
       setLoading(true);
 
-      const data = await loginUser({
+      const response = await loginUser({
         email,
         password,
       });
 
-      console.log("Login successful:", data);
+      console.log("Login response:", response);
+
+      if (response.token) {
+        localStorage.setItem("token", response.token);
+      }
 
       toast.success("Login successful!");
 
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-      }
+      const user = response.user || response.data;
 
-      router.push("/dashboard");
+      if (user?.role === "child") {
+        router.push("/child/dashboard");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (error) {
       console.error("Login failed:", error);
 
