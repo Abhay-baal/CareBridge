@@ -7,6 +7,7 @@ const {
   getMyParentProfile,
   updateMyParentProfile,
   deleteMyParentProfile,
+  getMyConnectionCode,
 } = require("../controllers/parentController");
 
 const {
@@ -26,6 +27,13 @@ router.get(
   authenticate,
   authorize("parent"),
   getMyParentProfile
+);
+
+router.get(
+  "/connection-code",
+  authenticate,
+  authorize("parent"),
+  getMyConnectionCode
 );
 
 router.put(

@@ -1,4 +1,34 @@
 const Parent = require("../models/Parent");
+const User = require("../models/User");
+
+const generateConnectionCode = () => {
+  const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+  let code = "";
+
+  for (let i = 0; i < 6; i++) {
+    code += characters.charAt(
+      Math.floor(Math.random() * characters.length)
+    );
+  }
+
+  return `CB-${code}`;
+};
+
+const generateUniqueConnectionCode = async () => {
+  let connectionCode;
+  let existingUser;
+
+  do {
+    connectionCode = generateConnectionCode();
+
+    existingUser = await User.findOne({
+      connectionCode,
+    });
+  } while (existingUser);
+
+  return connectionCode;
+};
 
 // Create Parent Profile
 const createParentProfile = async (req, res) => {
@@ -114,6 +144,8 @@ const updateMyParentProfile = async (req, res) => {
       data: parent,
     });
   } catch (error) {
+    console.error(error);
+
     res.status(500).json({
       success: false,
       message: "Server Error",
@@ -147,9 +179,52 @@ const deleteMyParentProfile = async (req, res) => {
   }
 };
 
+// Get Parent Connection Code
+const getMyConnectionCode = async (req, res) => {
+  try {
+    const user = await User.findOne({
+      _id: req.user.id,
+      role: "parent",
+    }).select("fullName connectionCode");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Parent account not found",
+      });
+    }
+
+    let code = user.connectionCode;
+
+    if (!code) {
+      code = await generateUniqueConnectionCode();
+
+      user.connectionCode = code;
+
+      await user.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        fullName: user.fullName,
+        connectionCode: code,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
 module.exports = {
   createParentProfile,
   getMyParentProfile,
   updateMyParentProfile,
   deleteMyParentProfile,
+  getMyConnectionCode,
 };

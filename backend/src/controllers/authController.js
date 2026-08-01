@@ -1,6 +1,36 @@
 const bcrypt = require("bcrypt");
 const User = require("../models/User");
+const Parent = require("../models/Parent");
 const jwt = require("jsonwebtoken");
+
+const generateConnectionCode = () => {
+  const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+  let code = "";
+
+  for (let i = 0; i < 6; i++) {
+    code += characters.charAt(
+      Math.floor(Math.random() * characters.length)
+    );
+  }
+
+  return `CB-${code}`;
+};
+
+const generateUniqueConnectionCode = async () => {
+  let connectionCode;
+  let existingUser;
+
+  do {
+    connectionCode = generateConnectionCode();
+
+    existingUser = await User.findOne({
+      connectionCode,
+    });
+  } while (existingUser);
+
+  return connectionCode;
+};
 
 const registerUser = async (req, res) => {
   try {
@@ -10,7 +40,7 @@ const registerUser = async (req, res) => {
       password,
       phone,
       role,
-      parentId,
+      connectionCode,
     } = req.body;
 
     if (!fullName || !email || !password || !phone || !role) {
@@ -59,22 +89,22 @@ const registerUser = async (req, res) => {
     let parent = null;
 
     if (role === "child") {
-      if (!parentId) {
+      if (!connectionCode) {
         return res.status(400).json({
           success: false,
-          message: "parentId is required for child registration",
+          message: "Parent connection code is required",
         });
       }
 
       parent = await User.findOne({
-        _id: parentId,
+        connectionCode: connectionCode.toUpperCase().trim(),
         role: "parent",
       });
 
       if (!parent) {
         return res.status(404).json({
           success: false,
-          message: "Parent account not found",
+          message: "Invalid parent connection code",
         });
       }
     }
@@ -88,7 +118,20 @@ const registerUser = async (req, res) => {
       phone,
       role,
       parent: parent?._id || null,
+      connectionCode:
+        role === "parent"
+          ? await generateUniqueConnectionCode()
+          : null,
     });
+
+    // Automatically create the Parent profile for new parent accounts.
+    if (role === "parent") {
+      await Parent.create({
+        user: user._id,
+        address: "Not provided",
+        emergencyContact: phone,
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -99,6 +142,7 @@ const registerUser = async (req, res) => {
         email: user.email,
         role: user.role,
         parent: user.parent,
+        connectionCode: user.connectionCode || null,
       },
     });
   } catch (error) {
@@ -167,6 +211,7 @@ const loginUser = async (req, res) => {
         email: user.email,
         role: user.role,
         parent: user.parent || null,
+        connectionCode: user.connectionCode || null,
       },
     });
   } catch (error) {

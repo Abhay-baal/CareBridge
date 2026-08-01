@@ -9,11 +9,14 @@ import { registerUser } from "../../services/authService";
 export default function RegisterForm() {
   const router = useRouter();
 
+  const [role, setRole] = useState("parent");
+
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     password: "",
     phone: "",
+    connectionCode: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -54,6 +57,11 @@ export default function RegisterForm() {
       newErrors.phone = "Phone number must be 10 digits";
     }
 
+    if (role === "child" && !formData.connectionCode.trim()) {
+      newErrors.connectionCode =
+        "Parent connection code is required";
+    }
+
     setErrors(newErrors);
 
     return Object.keys(newErrors).length === 0;
@@ -71,10 +79,20 @@ export default function RegisterForm() {
     try {
       setLoading(true);
 
-      const data = await registerUser({
-        ...formData,
-        role: "parent",
-      });
+      const payload = {
+        fullName: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone,
+        role,
+      };
+
+      if (role === "child") {
+        payload.connectionCode =
+          formData.connectionCode.toUpperCase().trim();
+      }
+
+      const data = await registerUser(payload);
 
       console.log("Registration successful:", data);
 
@@ -93,6 +111,46 @@ export default function RegisterForm() {
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
+      <div className="mb-6">
+        <p className="mb-3 text-sm font-medium text-gray-700">
+          I am registering as
+        </p>
+
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setRole("parent");
+              setErrors({});
+              setServerError("");
+            }}
+            className={`rounded-xl border px-4 py-3 text-sm font-semibold transition ${
+              role === "parent"
+                ? "border-blue-600 bg-blue-50 text-blue-700"
+                : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            Parent
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setRole("child");
+              setErrors({});
+              setServerError("");
+            }}
+            className={`rounded-xl border px-4 py-3 text-sm font-semibold transition ${
+              role === "child"
+                ? "border-blue-600 bg-blue-50 text-blue-700"
+                : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            Child
+          </button>
+        </div>
+      </div>
+
       <Input
         label="Full Name"
         type="text"
@@ -133,6 +191,24 @@ export default function RegisterForm() {
         error={errors.password}
       />
 
+      {role === "child" && (
+        <>
+          <Input
+            label="Parent Connection Code"
+            type="text"
+            placeholder="Example: CB-7K4P92"
+            value={formData.connectionCode}
+            onChange={handleChange}
+            name="connectionCode"
+            error={errors.connectionCode}
+          />
+
+          <p className="mb-4 -mt-2 text-xs text-gray-500">
+            Ask your parent for their CareBridge connection code.
+          </p>
+        </>
+      )}
+
       {serverError && (
         <p className="mb-4 text-sm text-red-500">
           {serverError}
@@ -140,7 +216,9 @@ export default function RegisterForm() {
       )}
 
       <Button type="submit" loading={loading}>
-        Register
+        {role === "parent"
+          ? "Create Parent Account"
+          : "Create Child Account"}
       </Button>
     </form>
   );
