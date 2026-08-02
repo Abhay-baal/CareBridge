@@ -1,15 +1,36 @@
 const Parent = require("../models/Parent");
+const ParentChild = require("../models/ParentChild");
+
+const getParentForChild = async (req) => {
+  const activeRelationship = await ParentChild.findOne({
+    child: req.user.id,
+    active: true,
+  });
+
+  if (activeRelationship) {
+    return Parent.findOne({
+      user: activeRelationship.parent,
+    }).populate("user", "fullName phone");
+  }
+
+  // Backward compatibility with the original MVP.
+  if (req.user.parent) {
+    return Parent.findOne({
+      user: req.user.parent,
+    }).populate("user", "fullName phone");
+  }
+
+  return null;
+};
 
 const getParentLocation = async (req, res) => {
   try {
-    const parent = await Parent.findOne({
-      user: req.user.parent,
-    }).populate("user", "fullName phone");
+    const parent = await getParentForChild(req);
 
     if (!parent) {
       return res.status(404).json({
         success: false,
-        message: "Parent profile not found",
+        message: "No active parent found",
       });
     }
 
@@ -24,7 +45,8 @@ const getParentLocation = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Parent location error:", error);
+
     res.status(500).json({
       success: false,
       message: "Server Error",

@@ -1,11 +1,38 @@
 const Parent = require("../models/Parent");
+const ParentChild = require("../models/ParentChild");
 const CarePlan = require("../models/CarePlan");
 const Appointment = require("../models/Appointment");
 
+/*
+ * Get the active Parent profile for the authenticated child.
+ *
+ * New multi-parent system:
+ *   Child -> ParentChild(active: true) -> Parent
+ *
+ * Backward compatibility:
+ *   If no ParentChild relationship exists, fall back to
+ *   the existing User.parent field.
+ */
 const getParentForChild = async (req) => {
-  return Parent.findOne({
-    user: req.user.parent,
-  }).populate("user", "fullName email phone");
+  const activeRelationship = await ParentChild.findOne({
+    child: req.user.id,
+    active: true,
+  });
+
+  if (activeRelationship) {
+    return Parent.findOne({
+      user: activeRelationship.parent,
+    }).populate("user", "fullName email phone");
+  }
+
+  // Backward compatibility with the original CareBridge MVP.
+  if (req.user.parent) {
+    return Parent.findOne({
+      user: req.user.parent,
+    }).populate("user", "fullName email phone");
+  }
+
+  return null;
 };
 
 const getChildDashboard = async (req, res) => {
@@ -15,15 +42,18 @@ const getChildDashboard = async (req, res) => {
     if (!parent) {
       return res.status(404).json({
         success: false,
-        message: "Parent profile not found",
+        message: "No active parent found",
       });
     }
 
     const [carePlans, appointments] = await Promise.all([
-      CarePlan.find({ parent: parent._id }).sort({ dueDate: 1 }),
-      Appointment.find({ parent: parent._id }).sort({
-        appointmentDate: 1,
-      }),
+      CarePlan.find({
+        parent: parent._id,
+      }).sort({ dueDate: 1 }),
+
+      Appointment.find({
+        parent: parent._id,
+      }).sort({ appointmentDate: 1 }),
     ]);
 
     const completedTasks = carePlans.filter(
@@ -45,7 +75,7 @@ const getChildDashboard = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Child dashboard error:", error);
 
     res.status(500).json({
       success: false,
@@ -61,7 +91,7 @@ const updateChildCarePlan = async (req, res) => {
     if (!parent) {
       return res.status(404).json({
         success: false,
-        message: "Parent profile not found",
+        message: "No active parent found",
       });
     }
 
@@ -92,7 +122,7 @@ const updateChildCarePlan = async (req, res) => {
       data: carePlan,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Child care plan update error:", error);
 
     res.status(500).json({
       success: false,
@@ -102,6 +132,7 @@ const updateChildCarePlan = async (req, res) => {
 };
 
 module.exports = {
+  getParentForChild,
   getChildDashboard,
   updateChildCarePlan,
 };

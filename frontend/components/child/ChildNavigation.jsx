@@ -10,9 +10,9 @@ const navigation = [
     icon: "🏠",
   },
   {
-    href: "/child/parent-details",
-    label: "Parent",
-    icon: "👤",
+    href: "/child/my-parents",
+    label: "Parents",
+    icon: "👨‍👩‍👧",
   },
   {
     href: "/child/location",
@@ -33,7 +33,9 @@ export default function ChildNavigation() {
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-white">
       <div className="mx-auto grid max-w-md grid-cols-4">
         {navigation.map((item) => {
-          const active = pathname === item.href;
+          const active =
+            pathname === item.href ||
+            pathname.startsWith(`${item.href}/`);
 
           return (
             <Link

@@ -1,8 +1,27 @@
 const EmergencyContact = require("../models/EmergencyContact");
 const Parent = require("../models/Parent");
+const ParentChild = require("../models/ParentChild");
 
 const getParentForChild = async (req) => {
-  return Parent.findOne({ user: req.user.parent });
+  const activeRelationship = await ParentChild.findOne({
+    child: req.user.id,
+    active: true,
+  });
+
+  if (activeRelationship) {
+    return Parent.findOne({
+      user: activeRelationship.parent,
+    });
+  }
+
+  // Backward compatibility with the original MVP.
+  if (req.user.parent) {
+    return Parent.findOne({
+      user: req.user.parent,
+    });
+  }
+
+  return null;
 };
 
 const getContacts = async (req, res) => {
@@ -12,7 +31,7 @@ const getContacts = async (req, res) => {
     if (!parent) {
       return res.status(404).json({
         success: false,
-        message: "Parent profile not found",
+        message: "No active parent found",
       });
     }
 
@@ -26,6 +45,7 @@ const getContacts = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+
     res.status(500).json({
       success: false,
       message: "Server Error",
@@ -40,7 +60,7 @@ const createContact = async (req, res) => {
     if (!parent) {
       return res.status(404).json({
         success: false,
-        message: "Parent profile not found",
+        message: "No active parent found",
       });
     }
 
@@ -59,6 +79,7 @@ const createContact = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+
     res.status(500).json({
       success: false,
       message: "Server Error",
@@ -73,7 +94,7 @@ const updateContact = async (req, res) => {
     if (!parent) {
       return res.status(404).json({
         success: false,
-        message: "Parent profile not found",
+        message: "No active parent found",
       });
     }
 
@@ -102,6 +123,7 @@ const updateContact = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+
     res.status(500).json({
       success: false,
       message: "Server Error",
@@ -116,7 +138,7 @@ const deleteContact = async (req, res) => {
     if (!parent) {
       return res.status(404).json({
         success: false,
-        message: "Parent profile not found",
+        message: "No active parent found",
       });
     }
 
@@ -138,6 +160,7 @@ const deleteContact = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+
     res.status(500).json({
       success: false,
       message: "Server Error",

@@ -1,0 +1,225 @@
+const mongoose = require("mongoose");
+
+const userSchema = new mongoose.Schema(
+  {
+    fullName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+
+    password: {
+      type: String,
+      required: true,
+    },
+
+    role: {
+      type: String,
+      enum: ["parent", "child"],
+      required: true,
+    },
+
+    phone: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    parent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    connectionCode: {
+      type: String,
+      unique: true,
+      sparse: true,
+      uppercase: true,
+      trim: true,
+    },
+
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+module.exports = mongoose.model("User", userSchema);
+const mongoose = require("mongoose");
+
+const parentSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true,
+    },
+
+    address: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    emergencyContact: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    
+    bloodGroup: {
+      type: String,
+    },
+
+    dateOfBirth: {
+      type: Date,
+    },
+
+  },
+  {
+    timestamps: true,
+  }
+);
+
+module.exports = mongoose.model("Parent", parentSchema);const mongoose = require("mongoose");
+
+const carePlanSchema = new mongoose.Schema(
+  {
+    parent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Parent",
+      required: true,
+    },
+
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    description: {
+      type: String,
+      trim: true,
+    },
+
+    status: {
+      type: String,
+      enum: ["pending", "completed"],
+      default: "pending",
+    },
+
+    dueDate: {
+      type: Date,
+      required: true,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+module.exports = mongoose.model("CarePlan", carePlanSchema);const mongoose = require("mongoose");
+
+const appointmentSchema = new mongoose.Schema(
+  {
+    parent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Parent",
+      required: true,
+    },
+
+    doctorName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    hospitalName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    appointmentDate: {
+      type: Date,
+      required: true,
+    },
+
+    status: {
+      type: String,
+      enum: ["upcoming", "completed", "cancelled"],
+      default: "upcoming",
+    },
+
+    notes: {
+      type: String,
+      trim: true,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+module.exports = mongoose.model("Appointment", appointmentSchema);const mongoose = require("mongoose");
+
+const healthRecordSchema = new mongoose.Schema(
+  {
+    parent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Parent",
+      required: true,
+    },
+
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    category: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    fileUrl: {
+      type: String,
+      required: true,
+    },
+
+    publicId: {
+      type: String,
+      required: true,
+    },
+
+    fileType: {
+      type: String,
+      required: true,
+    },
+
+    originalName: {
+      type: String,
+      default: "",
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+module.exports = mongoose.model("HealthRecord", healthRecordSchema);

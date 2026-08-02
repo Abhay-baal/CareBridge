@@ -111,18 +111,26 @@ const registerUser = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await User.create({
+    const userData = {
       fullName,
       email: normalizedEmail,
       password: hashedPassword,
       phone,
       role,
-      parent: parent?._id || null,
-      connectionCode:
-        role === "parent"
-          ? await generateUniqueConnectionCode()
-          : null,
-    });
+    };
+
+    // Keep the legacy parent relationship during migration.
+    if (role === "child") {
+      userData.parent = parent._id;
+    }
+
+    // Only parent accounts receive a connection code.
+    if (role === "parent") {
+      userData.connectionCode =
+        await generateUniqueConnectionCode();
+    }
+
+    const user = await User.create(userData);
 
     // Automatically create the Parent profile for new parent accounts.
     if (role === "parent") {
@@ -141,7 +149,7 @@ const registerUser = async (req, res) => {
         fullName: user.fullName,
         email: user.email,
         role: user.role,
-        parent: user.parent,
+        parent: user.parent || null,
         connectionCode: user.connectionCode || null,
       },
     });

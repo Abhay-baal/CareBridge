@@ -10,6 +10,7 @@ import AppointmentCard from "@/components/child/AppointmentCard";
 import TodayTasks from "@/components/child/TodayTasks";
 import StatsGrid from "@/components/child/StatsGrid";
 import LoadingState from "@/components/ui/LoadingState";
+import ParentSelector from "@/components/child/ParentSelector";
 
 import {
   getChildDashboard,
@@ -120,6 +121,8 @@ export default function ChildDashboard() {
       <WelcomeHeader
         parentName={parent?.user?.fullName}
       />
+
+      <ParentSelector />
 
       <ParentSummaryCard
         parent={{
