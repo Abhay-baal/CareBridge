@@ -18,9 +18,9 @@ export default function BottomNavigation() {
       icon: "❤️",
     },
     {
-      name: "Records",
-      href: "/health-records",
-      icon: "📋",
+      name: "Chat",
+      href: "/chat",
+      icon: "💬",
     },
     {
       name: "Location",

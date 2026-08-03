@@ -277,6 +277,21 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <Link
+            href="/chat"
+            className="rounded-xl border bg-white p-4 shadow-sm transition hover:shadow-md active:scale-[0.98]"
+          >
+            <div className="text-2xl">💬</div>
+
+            <h3 className="mt-2 font-semibold text-gray-900">
+              Chat
+            </h3>
+
+            <p className="mt-1 text-xs text-gray-500">
+              Message your connected child
+            </p>
+          </Link>
+
+          <Link
             href="/location"
             className="rounded-xl border bg-white p-4 shadow-sm transition hover:shadow-md active:scale-[0.98]"
           >
