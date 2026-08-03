@@ -3,7 +3,10 @@ const express = require("express");
 const router = express.Router();
 
 const {
-  getParentLocation,
+  startSharing,
+  updateLocation,
+  stopSharing,
+  getSharedLocation,
 } = require("../controllers/locationController");
 
 const {
@@ -11,11 +14,29 @@ const {
   authorize,
 } = require("../middleware/authMiddleware");
 
+router.use(
+  authenticate,
+  authorize("parent", "child")
+);
+
+router.patch(
+  "/start",
+  startSharing
+);
+
+router.patch(
+  "/update",
+  updateLocation
+);
+
+router.patch(
+  "/stop",
+  stopSharing
+);
+
 router.get(
   "/",
-  authenticate,
-  authorize("child"),
-  getParentLocation
+  getSharedLocation
 );
 
 module.exports = router;

@@ -29,6 +29,31 @@ const parentSchema = new mongoose.Schema(
       type: Date,
     },
 
+
+    latitude: {
+      type: Number,
+      default: null,
+    },
+
+    longitude: {
+      type: Number,
+      default: null,
+    },
+
+    accuracy: {
+      type: Number,
+      default: null,
+    },
+
+    isSharing: {
+      type: Boolean,
+      default: false,
+    },
+
+    locationUpdatedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

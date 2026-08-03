@@ -10,6 +10,7 @@ const emergencyRoutes = require("./routes/emergencyRoutes");
 const locationRoutes = require("./routes/locationRoutes");
 const healthRecordRoutes = require("./routes/healthRecordRoutes");
 const parentChildRoutes = require("./routes/parentChildRoutes");
+const messageRoutes = require("./routes/messageRoutes");
 
 const app = express();
 
@@ -43,4 +44,5 @@ app.use("/api/location", locationRoutes);
 app.use("/api/health-records", healthRecordRoutes);
 app.use("/api/parent-child", parentChildRoutes);
 
+app.use("/api/messages", messageRoutes);
 module.exports = app;
