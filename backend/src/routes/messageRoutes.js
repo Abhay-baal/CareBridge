@@ -13,21 +13,19 @@ const {
   authorize,
 } = require("../middleware/authMiddleware");
 
+// Parent + Child can use Chat
 router.use(
   authenticate,
   authorize("parent", "child")
 );
 
+// Send message
 router.post("/", sendMessage);
 
-router.get(
-  "/:parentChildId",
-  getMessages
-);
+// Get conversation
+router.get("/:parentChildId", getMessages);
 
-router.patch(
-  "/read",
-  markMessagesRead
-);
+// Mark received messages as read
+router.patch("/read", markMessagesRead);
 
 module.exports = router;

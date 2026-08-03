@@ -14,28 +14,32 @@ const {
   switchActiveParent,
 } = require("../controllers/parentChildController");
 
-router.use(
-  authenticate,
-  authorize("child")
-);
+// Authentication for all routes
+router.use(authenticate);
 
-router.post(
-  "/connect",
-  connectParent
-);
-
+// Parent + Child can read their relationships
 router.get(
   "/",
+  authorize("parent", "child"),
   getParents
+);
+
+// Child-only relationship management
+router.post(
+  "/connect",
+  authorize("child"),
+  connectParent
 );
 
 router.delete(
   "/:id",
+  authorize("child"),
   removeParent
 );
 
 router.patch(
   "/active/:id",
+  authorize("child"),
   switchActiveParent
 );
 

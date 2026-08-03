@@ -98,12 +98,19 @@ const connectParent = async (req, res) => {
 
 const getParents = async (req, res) => {
   try {
-    const relationships = await ParentChild.find({
-      child: req.user.id,
-    })
+    const query =
+      req.user.role === "parent"
+        ? { parent: req.user.id }
+        : { child: req.user.id };
+
+    const relationships = await ParentChild.find(query)
       .populate(
         "parent",
         "fullName email phone connectionCode"
+      )
+      .populate(
+        "child",
+        "fullName email phone"
       )
       .sort({
         active: -1,
