@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import Link from "next/link";
 
 import AppLayout from "@/components/layout/AppLayout";
+import FloatingActionButton from "@/components/emergency/FloatingActionButton";
 import WelcomeHeader from "@/components/dashboard/WelcomeHeader";
 import CarePlanList from "@/components/dashboard/CarePlanList";
 import AppointmentCard from "@/components/dashboard/AppointmentCard";
@@ -372,6 +373,7 @@ export default function DashboardPage() {
           error={appointmentError}
         />
       </section>
+      <FloatingActionButton />
     </AppLayout>
   );
 }
