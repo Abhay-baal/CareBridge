@@ -7,6 +7,7 @@ const appointmentRoutes = require("./routes/appointmentRoutes");
 const authRoutes = require("./routes/authRoutes");
 const childRoutes = require("./routes/childRoutes");
 const emergencyRoutes = require("./routes/emergencyRoutes");
+const emergencyEventRoutes = require("./routes/emergencyEventRoutes");
 const locationRoutes = require("./routes/locationRoutes");
 const healthRecordRoutes = require("./routes/healthRecordRoutes");
 const parentChildRoutes = require("./routes/parentChildRoutes");
@@ -40,6 +41,7 @@ app.use("/api/appointments", appointmentRoutes);
 
 app.use("/api/child", childRoutes);
 app.use("/api/emergency", emergencyRoutes);
+app.use("/api/emergency-events", emergencyEventRoutes);
 app.use("/api/location", locationRoutes);
 app.use("/api/health-records", healthRecordRoutes);
 app.use("/api/parent-child", parentChildRoutes);
