@@ -8,7 +8,7 @@ export default function WelcomeHeader({ parentName = "Parent" }) {
         Hello 👋
       </h1>
       <p className="mt-1 text-sm text-gray-600">
-        Here’s an overview of {parentName}'s health.
+        Here’s an overview of {parentName}&apos;s health.
       </p>
     </div>
   );

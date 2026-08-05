@@ -29,6 +29,11 @@ const navigation = [
     label: "Emergency",
     icon: "🚨",
   },
+  {
+    href: "/profile",
+    label: "Profile",
+    icon: "👤",
+  },
 ];
 
 export default function ChildNavigation() {
@@ -36,7 +41,7 @@ export default function ChildNavigation() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-white">
-      <div className="mx-auto grid max-w-md grid-cols-5">
+      <div className="mx-auto grid max-w-md grid-cols-6">
         {navigation.map((item) => {
           const active =
             pathname === item.href ||
