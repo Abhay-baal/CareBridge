@@ -29,7 +29,7 @@ export default function MessageInput({
         }
         placeholder="Type a message..."
         disabled={disabled}
-        className="flex-1 rounded-full border px-4 py-3"
+        className="flex-1 rounded-full border px-4 py-3 text-gray-900 placeholder:text-gray-500 outline-none focus:border-blue-500"
       />
 
       <button

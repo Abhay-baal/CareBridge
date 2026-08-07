@@ -525,7 +525,7 @@ export default function Home() {
             </p>
 
             <p className="mt-3 text-2xl font-bold text-slate-950">
-              Abhay Singh
+              Abhybir Singh
             </p>
 
             <p className="mt-2 text-slate-600">
@@ -588,7 +588,7 @@ export default function Home() {
 
           <div className="text-sm">
             Built with purpose by{" "}
-            <span className="font-semibold text-white">Abhay Singh</span>
+            <span className="font-semibold text-white">Abhybir Singh</span>
           </div>
 
           <p className="text-xs">

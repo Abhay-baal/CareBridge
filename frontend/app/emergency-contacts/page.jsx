@@ -12,7 +12,7 @@ export default function EmergencyContactsPage() {
 
       <div className="space-y-4">
         <EmergencyContactCard
-          name="Abhay Singh"
+          name="Abhybir Singh"
           relation="Son"
           phone="9876543210"
         />

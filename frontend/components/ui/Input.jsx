@@ -9,7 +9,7 @@ export default function Input({
 }) {
     return (
         <div className="mb-4">
-            <label className="mb-2 block text-sm font-medium">
+            <label className="mb-2 block text-sm font-medium text-gray-800">
                 {label}
             </label>
 
@@ -19,7 +19,7 @@ export default function Input({
                 placeholder={placeholder}
                 value={value}
                 onChange={onChange}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder:text-gray-500 outline-none focus:border-blue-500"
             />
 
             {error && (
