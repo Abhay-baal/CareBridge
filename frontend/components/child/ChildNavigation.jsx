@@ -30,6 +30,11 @@ const navigation = [
     icon: "🚨",
   },
   {
+    href: "/child/caregivers",
+    label: "Caregivers",
+    icon: "❤️",
+  },
+  {
     href: "/profile",
     label: "Profile",
     icon: "👤",
@@ -40,8 +45,8 @@ export default function ChildNavigation() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-white">
-      <div className="mx-auto grid max-w-md grid-cols-6">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white">
+      <div className="mx-auto flex max-w-5xl items-center justify-around overflow-x-auto">
         {navigation.map((item) => {
           const active =
             pathname === item.href ||
@@ -51,7 +56,7 @@ export default function ChildNavigation() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center px-2 py-3 text-xs transition ${
+              className={`flex min-w-[72px] flex-col items-center justify-center px-2 py-3 text-xs transition ${
                 active
                   ? "font-semibold text-blue-600"
                   : "text-gray-500"
@@ -61,7 +66,7 @@ export default function ChildNavigation() {
                 {item.icon}
               </span>
 
-              <span className="mt-1">
+              <span className="mt-1 whitespace-nowrap">
                 {item.label}
               </span>
             </Link>
