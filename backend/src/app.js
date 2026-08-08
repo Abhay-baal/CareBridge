@@ -13,6 +13,7 @@ const healthRecordRoutes = require("./routes/healthRecordRoutes");
 const parentChildRoutes = require("./routes/parentChildRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const providerRoutes = require("./routes/providerRoutes");
+const bookingRoutes = require("./routes/bookingRoutes");
 
 const app = express();
 
@@ -49,4 +50,5 @@ app.use("/api/parent-child", parentChildRoutes);
 
 app.use("/api/messages", messageRoutes);
 app.use("/api/providers", providerRoutes);
+app.use("/api/bookings", bookingRoutes);
 module.exports = app;
