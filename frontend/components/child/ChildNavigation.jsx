@@ -35,7 +35,7 @@ const navigation = [
     icon: "❤️",
   },
   {
-    href: "/profile",
+    href: "/child/profile",
     label: "Profile",
     icon: "👤",
   },

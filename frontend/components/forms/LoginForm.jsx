@@ -64,6 +64,10 @@ export default function LoginForm() {
         localStorage.setItem("role", user.role);
       }
 
+      if (user) {
+        localStorage.setItem("user", JSON.stringify(user));
+      }
+
       toast.success("Login successful!");
 
       if (user?.role === "child") {
