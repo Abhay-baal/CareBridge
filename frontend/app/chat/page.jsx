@@ -35,7 +35,12 @@ const apiRequest = async (url, options = {}) => {
 };
 
 const ChatHeader = ({ parent, role }) => {
-  const backPath = role === "child" ? "/child/dashboard" : "/dashboard";
+  const backPath =
+    role === "child"
+      ? "/child/dashboard"
+      : role === "parent"
+        ? "/dashboard"
+        : "/login";
 
   return (
     <div className="border-b bg-white px-4 py-3">
@@ -174,10 +179,12 @@ export default function ChatPage() {
 
   const bottomRef = useRef(null);
 
-  const role =
-    typeof window !== "undefined"
-      ? localStorage.getItem("role")
-      : null;
+  const [role, setRole] = useState(null);
+
+  useEffect(() => {
+    const storedRole = localStorage.getItem("role");
+    setRole(storedRole);
+  }, []);
 
   const loadRelationship = async () => {
     const result = await apiRequest(

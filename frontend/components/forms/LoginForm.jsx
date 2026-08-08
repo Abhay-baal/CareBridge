@@ -58,9 +58,13 @@ export default function LoginForm() {
         localStorage.setItem("token", response.token);
       }
 
-      toast.success("Login successful!");
-
       const user = response.user || response.data;
+
+      if (user?.role) {
+        localStorage.setItem("role", user.role);
+      }
+
+      toast.success("Login successful!");
 
       if (user?.role === "child") {
         router.push("/child/dashboard");
