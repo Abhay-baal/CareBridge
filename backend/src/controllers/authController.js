@@ -50,7 +50,7 @@ const registerUser = async (req, res) => {
       });
     }
 
-    if (!["parent", "child"].includes(role)) {
+    if (!["parent", "child", "provider"].includes(role)) {
       return res.status(400).json({
         success: false,
         message: "Invalid role",

@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["parent", "child"],
+      enum: ["parent", "child", "provider"],
       required: true,
     },
 
