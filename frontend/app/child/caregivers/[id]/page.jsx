@@ -46,15 +46,11 @@ export default function CaregiverProfilePage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gray-50 px-4 pb-28 pt-6">
-        <div className="mx-auto max-w-2xl">
-          <div className="animate-pulse rounded-2xl bg-white p-6 shadow-sm">
-            <div className="h-8 w-48 rounded bg-gray-200" />
-            <div className="mt-3 h-4 w-32 rounded bg-gray-200" />
-            <div className="mt-8 h-4 w-full rounded bg-gray-200" />
-            <div className="mt-2 h-4 w-5/6 rounded bg-gray-200" />
-            <div className="mt-8 h-12 w-full rounded-xl bg-gray-200" />
-          </div>
+      <main className="min-h-screen bg-gray-50 px-4 py-6">
+        <div className="mx-auto max-w-xl animate-pulse">
+          <div className="h-5 w-32 rounded bg-gray-200" />
+          <div className="mt-6 h-10 w-56 rounded bg-gray-200" />
+          <div className="mt-6 h-96 rounded-2xl bg-gray-200" />
         </div>
       </main>
     );
@@ -62,9 +58,9 @@ export default function CaregiverProfilePage() {
 
   if (error || !caregiver) {
     return (
-      <main className="min-h-screen bg-gray-50 px-4 pb-28 pt-6">
-        <div className="mx-auto max-w-2xl">
-          <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
+      <main className="min-h-screen bg-gray-50 px-4 py-8">
+        <div className="mx-auto max-w-xl text-center">
+          <div className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="text-4xl">🔍</div>
 
             <h1 className="mt-4 text-xl font-semibold text-gray-900">
@@ -97,11 +93,13 @@ export default function CaregiverProfilePage() {
     );
   }
 
-  const isAvailable = caregiver.availability === true;
+  const isAvailable =
+    caregiver.availability === true &&
+    (!caregiver.status || caregiver.status === "active");
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 pb-28 pt-6">
-      <div className="mx-auto max-w-2xl">
+    <main className="min-h-screen bg-gray-50 px-4 py-5 pb-10">
+      <div className="mx-auto max-w-xl">
         <Link
           href="/child/caregivers"
           className="text-sm font-medium text-blue-600"
@@ -138,7 +136,8 @@ export default function CaregiverProfilePage() {
             </h2>
 
             <p className="mt-2 text-sm leading-7 text-gray-600">
-              {caregiver.bio || "No bio has been provided yet."}
+              {caregiver.bio ||
+                "No bio has been provided yet."}
             </p>
           </section>
 
@@ -177,17 +176,22 @@ export default function CaregiverProfilePage() {
             </p>
           </section>
 
-          <button
-            type="button"
-            disabled={!isAvailable}
-            className={`mt-8 w-full rounded-xl px-5 py-3.5 text-sm font-semibold text-white ${
-              isAvailable
-                ? "bg-blue-600 hover:bg-blue-700"
-                : "cursor-not-allowed bg-gray-300"
-            }`}
-          >
-            {isAvailable ? "Request Care" : "Currently Unavailable"}
-          </button>
+          {isAvailable ? (
+            <Link
+              href={`/child/caregivers/${params.id}/request`}
+              className="mt-8 block w-full rounded-xl bg-blue-600 px-5 py-3.5 text-center text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              Request Care
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="mt-8 w-full cursor-not-allowed rounded-xl bg-gray-300 px-5 py-3.5 text-sm font-semibold text-white"
+            >
+              Currently Unavailable
+            </button>
+          )}
         </div>
       </div>
     </main>

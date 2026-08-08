@@ -110,7 +110,6 @@ const getBookingWithAuthorization = async (req) => {
   return { booking };
 };
 
-// Create Booking
 const createBooking = async (req, res) => {
   try {
     const {
@@ -193,19 +192,9 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // parent in request is the Parent profile ID.
-    const parentProfile = await Parent.findById(parent);
-
-    if (!parentProfile) {
-      return res.status(404).json({
-        success: false,
-        message: "Parent not found",
-      });
-    }
-
-    // Verify the Parent profile belongs to a valid parent user.
+    // The child-parent relationship stores the Parent USER id.
     const parentUser = await User.findOne({
-      _id: parentProfile.user,
+      _id: parent,
       role: "parent",
     });
 
@@ -236,6 +225,18 @@ const createBooking = async (req, res) => {
       });
     }
 
+    // Resolve the actual Parent PROFILE used by Booking.
+    const parentProfile = await Parent.findOne({
+      user: parentUser._id,
+    });
+
+    if (!parentProfile) {
+      return res.status(404).json({
+        success: false,
+        message: "Parent profile not found",
+      });
+    }
+
     // Verify provider.
     const careProvider = await CareProvider.findById(provider);
 
@@ -263,11 +264,12 @@ const createBooking = async (req, res) => {
     // Verify requested service belongs to provider.
     const normalizedService = service.trim();
 
-    const validService = careProvider.services.some(
-      (providerService) =>
-        providerService.toLowerCase() ===
-        normalizedService.toLowerCase()
-    );
+    const validService = Array.isArray(careProvider.services)
+      && careProvider.services.some(
+        (providerService) =>
+          providerService.toLowerCase() ===
+          normalizedService.toLowerCase()
+      );
 
     if (!validService) {
       return res.status(400).json({
@@ -313,7 +315,6 @@ const createBooking = async (req, res) => {
   }
 };
 
-// Get Bookings
 const getBookings = async (req, res) => {
   try {
     let query = {};
@@ -371,7 +372,6 @@ const getBookings = async (req, res) => {
   }
 };
 
-// Get Single Booking
 const getBooking = async (req, res) => {
   try {
     const result = await getBookingWithAuthorization(req);
@@ -401,7 +401,6 @@ const getBooking = async (req, res) => {
   }
 };
 
-// Update Booking Status
 const updateBookingStatus = async (req, res) => {
   try {
     const { status } = req.body;
