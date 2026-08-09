@@ -1,0 +1,378 @@
+"use client";
+
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+const LiveMap = dynamic(
+  () => import("@/components/location/LiveMap"),
+  { ssr: false }
+);
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:5000/api";
+
+const getToken = () =>
+  typeof window !== "undefined"
+    ? localStorage.getItem("token")
+    : null;
+
+const apiRequest = async (url, options = {}) => {
+  const response = await fetch(`${API_URL}${url}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getToken()}`,
+      ...(options.headers || {}),
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.message || "Request failed"
+    );
+  }
+
+  return data;
+};
+
+export default function LiveLocationPage() {
+  const [location, setLocation] = useState(null);
+  const [sharing, setSharing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const watchId = useRef(null);
+
+  const role =
+    typeof window !== "undefined"
+      ? localStorage.getItem("role")
+      : null;
+
+  const fetchLocation = useCallback(async () => {
+    try {
+      const result = await apiRequest("/location");
+
+      setLocation(result.data);
+      setSharing(Boolean(result.data?.isSharing));
+      setError("");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLocation();
+
+    const interval = setInterval(
+      fetchLocation,
+      5000
+    );
+
+    return () => {
+      clearInterval(interval);
+
+      if (watchId.current !== null) {
+        navigator.geolocation.clearWatch(
+          watchId.current
+        );
+        watchId.current = null;
+      }
+    };
+  }, [fetchLocation]);
+
+  const sendPosition = async (
+    position,
+    endpoint
+  ) => {
+    const payload = {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      accuracy: position.coords.accuracy,
+    };
+
+    const result = await apiRequest(endpoint, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+
+    setLocation((prev) => ({
+      ...(prev || {}),
+      ...(result.data || payload),
+      ...payload,
+      isSharing: true,
+      updatedAt:
+        result.data?.updatedAt ||
+        new Date().toISOString(),
+    }));
+
+    setSharing(true);
+  };
+
+  const startSharing = () => {
+    if (!navigator.geolocation) {
+      setError(
+        "This browser does not support GPS location."
+      );
+      return;
+    }
+
+    setBusy(true);
+    setError("");
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          await sendPosition(
+            position,
+            "/location/start"
+          );
+
+          watchId.current =
+            navigator.geolocation.watchPosition(
+              async (updatedPosition) => {
+                try {
+                  await sendPosition(
+                    updatedPosition,
+                    "/location/update"
+                  );
+                } catch (err) {
+                  console.error(
+                    "Location update failed:",
+                    err
+                  );
+                }
+              },
+              (err) => {
+                console.error(
+                  "GPS watch error:",
+                  err
+                );
+
+                if (err.code === 1) {
+                  setError(
+                    "Location permission was denied."
+                  );
+                } else if (err.code === 2) {
+                  setError(
+                    "Your device could not determine a location."
+                  );
+                } else if (err.code === 3) {
+                  setError(
+                    "GPS location request timed out."
+                  );
+                }
+              },
+              {
+                enableHighAccuracy: true,
+                maximumAge: 5000,
+                timeout: 10000,
+              }
+            );
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          setBusy(false);
+        }
+      },
+      (err) => {
+        setBusy(false);
+
+        if (err.code === 1) {
+          setError(
+            "Location permission was denied. Please allow location access."
+          );
+        } else if (err.code === 2) {
+          setError(
+            "Location is unavailable. Check GPS/location services."
+          );
+        } else if (err.code === 3) {
+          setError(
+            "Getting your location timed out. Please try again."
+          );
+        } else {
+          setError(
+            "Unable to get your current location."
+          );
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 5000,
+        timeout: 10000,
+      }
+    );
+  };
+
+  const stopSharing = async () => {
+    try {
+      setBusy(true);
+      setError("");
+
+      if (watchId.current !== null) {
+        navigator.geolocation.clearWatch(
+          watchId.current
+        );
+
+        watchId.current = null;
+      }
+
+      await apiRequest("/location/stop", {
+        method: "PATCH",
+      });
+
+      setSharing(false);
+
+      setLocation((prev) => ({
+        ...(prev || {}),
+        isSharing: false,
+      }));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gray-50 px-4 py-6">
+        <div className="mx-auto max-w-3xl">
+          <div className="h-8 w-48 animate-pulse rounded bg-gray-200" />
+          <div className="mt-5 h-[360px] animate-pulse rounded-3xl bg-gray-200" />
+        </div>
+      </main>
+    );
+  }
+
+  const hasCoordinates =
+    typeof location?.latitude === "number" &&
+    typeof location?.longitude === "number";
+
+  return (
+    <main className="min-h-screen bg-gray-50 px-4 py-5 pb-10">
+      <div className="mx-auto max-w-3xl">
+        <div className="mb-5">
+          <p className="text-sm font-medium text-blue-600">
+            CareBridge
+          </p>
+
+          <h1 className="mt-1 text-2xl font-bold text-gray-900">
+            Live Location
+          </h1>
+
+          <p className="mt-1 text-sm text-gray-500">
+            Share your real-time location with your
+            connected child.
+          </p>
+        </div>
+
+        {error && (
+          <div className="mb-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
+          <div className="h-[360px]">
+            <LiveMap
+              latitude={
+                hasCoordinates
+                  ? location.latitude
+                  : null
+              }
+              longitude={
+                hasCoordinates
+                  ? location.longitude
+                  : null
+              }
+              accuracy={location?.accuracy}
+              parentName="Your location"
+            />
+          </div>
+
+          <div className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                  Sharing status
+                </p>
+
+                <p
+                  className={`mt-1 font-semibold ${
+                    sharing
+                      ? "text-green-600"
+                      : "text-gray-600"
+                  }`}
+                >
+                  {sharing
+                    ? "● Location sharing active"
+                    : "○ Location sharing stopped"}
+                </p>
+              </div>
+
+              {location?.accuracy != null && (
+                <div className="text-right">
+                  <p className="text-xs text-gray-400">
+                    GPS accuracy
+                  </p>
+
+                  <p className="mt-1 font-semibold text-gray-900">
+                    ±{Math.round(
+                      location.accuracy
+                    )} m
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {location?.updatedAt && (
+              <p className="mt-3 text-xs text-gray-400">
+                Updated{" "}
+                {new Date(
+                  location.updatedAt
+                ).toLocaleTimeString()}
+              </p>
+            )}
+
+            {role === "parent" && (
+              <div className="mt-5">
+                {!sharing ? (
+                  <button
+                    onClick={startSharing}
+                    disabled={busy}
+                    className="w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {busy
+                      ? "Getting GPS location..."
+                      : "Start Sharing Location"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={stopSharing}
+                    disabled={busy}
+                    className="w-full rounded-xl bg-red-600 px-4 py-3 font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {busy
+                      ? "Stopping..."
+                      : "Stop Sharing Location"}
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div className="mt-4 rounded-2xl bg-blue-50 p-4 text-xs leading-5 text-blue-700">
+              Keep CareBridge open while sharing for
+              continuous foreground GPS updates.
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}

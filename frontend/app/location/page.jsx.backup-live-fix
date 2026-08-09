@@ -9,7 +9,7 @@ const LiveMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-80 items-center justify-center bg-slate-100 text-sm text-gray-500">
+      <div className="flex h-80 items-center justify-center rounded-2xl bg-slate-100">
         Loading map...
       </div>
     ),
@@ -38,7 +38,9 @@ const apiRequest = async (url, options = {}) => {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || "Request failed");
+    throw new Error(
+      data.message || "Request failed"
+    );
   }
 
   return data;
@@ -49,113 +51,63 @@ export default function LocationPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [gpsStatus, setGpsStatus] = useState("");
 
   const watchId = useRef(null);
-  const gpsRefreshInterval = useRef(null);
-  const sharingRef = useRef(false);
-  const mountedRef = useRef(false);
 
   const fetchLocation = useCallback(async () => {
     try {
       const result = await apiRequest("/location");
-
-      if (!mountedRef.current) return;
-
       setLocation(result.data);
-      sharingRef.current = Boolean(result.data?.isSharing);
     } catch (err) {
-      if (mountedRef.current) {
-        setError(err.message);
-      }
+      setError(err.message);
     } finally {
-      if (mountedRef.current) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    mountedRef.current = true;
-
     fetchLocation();
 
     return () => {
-      mountedRef.current = false;
-
       if (
         watchId.current !== null &&
-        typeof navigator !== "undefined" &&
         navigator.geolocation
       ) {
-        navigator.geolocation.clearWatch(watchId.current);
+        navigator.geolocation.clearWatch(
+          watchId.current
+        );
         watchId.current = null;
       }
-
-      if (gpsRefreshInterval.current !== null) {
-        clearInterval(gpsRefreshInterval.current);
-        gpsRefreshInterval.current = null;
-      }
-
-      sharingRef.current = false;
     };
   }, [fetchLocation]);
 
-  const sendPosition = useCallback(async (position, endpoint) => {
+  const sendPosition = async (
+    position,
+    endpoint
+  ) => {
     const payload = {
       latitude: position.coords.latitude,
       longitude: position.coords.longitude,
-      accuracy:
-        typeof position.coords.accuracy === "number"
-          ? position.coords.accuracy
-          : null,
+      accuracy: position.coords.accuracy,
     };
-
-    console.log("📍 GPS position:", {
-      latitude: payload.latitude,
-      longitude: payload.longitude,
-      accuracy: payload.accuracy,
-      endpoint,
-    });
 
     const result = await apiRequest(endpoint, {
       method: "PATCH",
       body: JSON.stringify(payload),
     });
 
-    if (!mountedRef.current) return;
-
-    console.log("✅ Location uploaded:", result.data);
-
     setLocation((previous) => ({
       ...(previous || {}),
       ...result.data,
-      latitude: payload.latitude,
-      longitude: payload.longitude,
-      accuracy: payload.accuracy,
-      isSharing: true,
-      updatedAt:
-        result.data?.updatedAt ||
-        new Date().toISOString(),
       parentName:
         previous?.parentName || "Your Location",
     }));
+  };
 
-    setGpsStatus(
-      `GPS active • ±${Math.round(
-        payload.accuracy || 0
-      )}m`
-    );
-  }, []);
-
-  const handlePositionError = useCallback((err) => {
-    console.error("GPS error:", err);
-
-    if (!mountedRef.current) return;
-
+  const handlePositionError = (err) => {
     if (err.code === 1) {
       setError(
-        "Location permission was denied. Please allow Precise Location for CareBridge."
+        "Location permission was denied. Please allow location access in your browser settings."
       );
     } else if (err.code === 2) {
       setError(
@@ -163,145 +115,12 @@ export default function LocationPage() {
       );
     } else if (err.code === 3) {
       setError(
-        "GPS request timed out. Keep Location Services enabled and try again."
+        "Location request timed out. Please try again."
       );
     } else {
       setError("Unable to access your current location.");
     }
-
-    setGpsStatus("GPS unavailable");
-  }, []);
-
-  const startGpsWatcher = useCallback(() => {
-    if (!navigator.geolocation) {
-      throw new Error(
-        "Geolocation is not supported by this browser."
-      );
-    }
-
-    if (watchId.current !== null) {
-      navigator.geolocation.clearWatch(watchId.current);
-      watchId.current = null;
-    }
-
-    console.log("▶️ Starting continuous GPS watcher");
-
-    watchId.current = navigator.geolocation.watchPosition(
-      async (position) => {
-        console.log("🔄 watchPosition callback fired");
-
-        if (!sharingRef.current) {
-          console.log("GPS callback ignored because sharing is off");
-          return;
-        }
-
-        try {
-          await sendPosition(
-            position,
-            "/location/update"
-          );
-        } catch (err) {
-          console.error(
-            "❌ Watch location update failed:",
-            err
-          );
-
-          if (mountedRef.current) {
-            setError(
-              "GPS is working, but the latest location could not be uploaded."
-            );
-          }
-        }
-      },
-      handlePositionError,
-      {
-        enableHighAccuracy: true,
-        maximumAge: 5000,
-        timeout: 15000,
-      }
-    );
-
-    console.log(
-      "✅ GPS watcher started:",
-      watchId.current
-    );
-  }, [handlePositionError, sendPosition]);
-
-  const startGpsFallback = useCallback(() => {
-    if (gpsRefreshInterval.current !== null) {
-      clearInterval(gpsRefreshInterval.current);
-    }
-
-    console.log(
-      "▶️ Starting foreground GPS refresh fallback"
-    );
-
-    gpsRefreshInterval.current = setInterval(() => {
-      if (!sharingRef.current) {
-        return;
-      }
-
-      console.log(
-        "🔁 Foreground GPS refresh"
-      );
-
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          if (!sharingRef.current) return;
-
-          try {
-            await sendPosition(
-              position,
-              "/location/update"
-            );
-          } catch (err) {
-            console.error(
-              "❌ Fallback location update failed:",
-              err
-            );
-          }
-        },
-        handlePositionError,
-        {
-          enableHighAccuracy: true,
-          maximumAge: 5000,
-          timeout: 15000,
-        }
-      );
-    }, 5000);
-  }, [handlePositionError, sendPosition]);
-
-  const stopGpsTracking = useCallback(() => {
-    sharingRef.current = false;
-
-    if (
-      watchId.current !== null &&
-      navigator.geolocation
-    ) {
-      console.log(
-        "⏹️ Clearing GPS watcher:",
-        watchId.current
-      );
-
-      navigator.geolocation.clearWatch(
-        watchId.current
-      );
-
-      watchId.current = null;
-    }
-
-    if (gpsRefreshInterval.current !== null) {
-      console.log(
-        "⏹️ Clearing GPS refresh fallback"
-      );
-
-      clearInterval(
-        gpsRefreshInterval.current
-      );
-
-      gpsRefreshInterval.current = null;
-    }
-  }, []);
+  };
 
   const startSharing = () => {
     if (!navigator.geolocation) {
@@ -311,51 +130,43 @@ export default function LocationPage() {
       return;
     }
 
-    stopGpsTracking();
-
     setBusy(true);
     setError("");
-    setGpsStatus("Finding your GPS location...");
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         try {
-          console.log(
-            "📍 Initial GPS position received"
-          );
-
           await sendPosition(
             position,
             "/location/start"
           );
 
-          sharingRef.current = true;
-
-          startGpsWatcher();
-          startGpsFallback();
-
-          if (mountedRef.current) {
-            setGpsStatus(
-              `GPS active • ±${Math.round(
-                position.coords.accuracy || 0
-              )}m`
+          watchId.current =
+            navigator.geolocation.watchPosition(
+              async (updatedPosition) => {
+                try {
+                  await sendPosition(
+                    updatedPosition,
+                    "/location/update"
+                  );
+                } catch (err) {
+                  console.error(
+                    "Location update failed:",
+                    err
+                  );
+                }
+              },
+              handlePositionError,
+              {
+                enableHighAccuracy: true,
+                maximumAge: 5000,
+                timeout: 10000,
+              }
             );
-          }
         } catch (err) {
-          console.error(
-            "❌ Failed to start location sharing:",
-            err
-          );
-
-          if (mountedRef.current) {
-            setError(err.message);
-          }
-
-          sharingRef.current = false;
+          setError(err.message);
         } finally {
-          if (mountedRef.current) {
-            setBusy(false);
-          }
+          setBusy(false);
         }
       },
       (err) => {
@@ -365,7 +176,7 @@ export default function LocationPage() {
       {
         enableHighAccuracy: true,
         maximumAge: 0,
-        timeout: 15000,
+        timeout: 10000,
       }
     );
   };
@@ -374,53 +185,47 @@ export default function LocationPage() {
     setBusy(true);
     setError("");
 
-    stopGpsTracking();
-
     try {
-      await apiRequest("/location/stop", {
-        method: "PATCH",
-      });
-
-      if (mountedRef.current) {
-        setLocation((previous) => ({
-          ...(previous || {}),
-          isSharing: false,
-        }));
-
-        setGpsStatus("GPS sharing stopped");
+      if (
+        watchId.current !== null &&
+        navigator.geolocation
+      ) {
+        navigator.geolocation.clearWatch(
+          watchId.current
+        );
+        watchId.current = null;
       }
-    } catch (err) {
-      console.error(
-        "❌ Failed to stop location sharing:",
-        err
+
+      const result = await apiRequest(
+        "/location/stop",
+        {
+          method: "PATCH",
+        }
       );
 
-      if (mountedRef.current) {
-        setError(err.message);
-      }
+      setLocation((previous) => ({
+        ...(previous || {}),
+        ...result.data,
+        isSharing: false,
+      }));
+    } catch (err) {
+      setError(err.message);
     } finally {
-      if (mountedRef.current) {
-        setBusy(false);
-      }
+      setBusy(false);
     }
   };
 
-  const sharing =
-    location?.isSharing === true;
+  const sharing = location?.isSharing === true;
 
   const accuracy =
     typeof location?.accuracy === "number"
       ? Math.round(location.accuracy)
       : null;
 
-  const hasLocation =
-    typeof location?.latitude === "number" &&
-    typeof location?.longitude === "number";
-
   return (
     <AppLayout>
-      <main className="min-h-screen bg-slate-50">
-        <div className="mx-auto max-w-4xl px-4 py-6">
+      <main className="min-h-screen bg-slate-50 px-4 py-6">
+        <div className="mx-auto max-w-2xl">
           <div className="mb-5">
             <p className="text-sm font-medium text-blue-600">
               CareBridge
@@ -451,8 +256,7 @@ export default function LocationPage() {
               longitude={location?.longitude}
               accuracy={location?.accuracy}
               parentName={
-                location?.parentName ||
-                "Your Location"
+                location?.parentName || "Your Location"
               }
             />
 
@@ -496,7 +300,6 @@ export default function LocationPage() {
                       <p className="text-xs text-gray-500">
                         GPS accuracy
                       </p>
-
                       <p className="mt-1 font-semibold text-gray-900">
                         {accuracy !== null
                           ? `±${accuracy} m`
@@ -508,7 +311,6 @@ export default function LocationPage() {
                       <p className="text-xs text-gray-500">
                         Last update
                       </p>
-
                       <p className="mt-1 font-semibold text-gray-900">
                         {location.updatedAt
                           ? new Date(
@@ -519,12 +321,6 @@ export default function LocationPage() {
                     </div>
                   </div>
                 )}
-
-              {gpsStatus && (
-                <div className="mt-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm text-blue-700">
-                  {gpsStatus}
-                </div>
-              )}
 
               {loading ? (
                 <div className="mt-5 rounded-2xl bg-slate-100 p-4 text-center text-sm text-gray-500">
