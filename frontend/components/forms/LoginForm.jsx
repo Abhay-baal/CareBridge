@@ -72,8 +72,12 @@ export default function LoginForm() {
 
       if (user?.role === "child") {
         router.push("/child/dashboard");
-      } else {
+      } else if (user?.role === "provider") {
+        router.push("/provider/dashboard");
+      } else if (user?.role === "parent") {
         router.push("/dashboard");
+      } else {
+        setError("Invalid user role. Please contact support.");
       }
     } catch (error) {
       console.error("Login failed:", error);

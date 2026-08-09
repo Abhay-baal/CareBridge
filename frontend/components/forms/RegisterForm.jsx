@@ -110,13 +110,13 @@ export default function RegisterForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="w-full">
-      <div className="mb-6">
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div>
         <p className="mb-3 text-sm font-medium text-gray-700">
           I am registering as
         </p>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <button
             type="button"
             onClick={() => {
@@ -124,7 +124,7 @@ export default function RegisterForm() {
               setErrors({});
               setServerError("");
             }}
-            className={`rounded-xl border px-4 py-3 text-sm font-semibold transition ${
+            className={`rounded-xl border px-3 py-3 text-sm font-semibold transition ${
               role === "parent"
                 ? "border-blue-600 bg-blue-50 text-blue-700"
                 : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
@@ -140,13 +140,29 @@ export default function RegisterForm() {
               setErrors({});
               setServerError("");
             }}
-            className={`rounded-xl border px-4 py-3 text-sm font-semibold transition ${
+            className={`rounded-xl border px-3 py-3 text-sm font-semibold transition ${
               role === "child"
                 ? "border-blue-600 bg-blue-50 text-blue-700"
                 : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
             }`}
           >
             Child
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setRole("provider");
+              setErrors({});
+              setServerError("");
+            }}
+            className={`rounded-xl border px-3 py-3 text-sm font-semibold transition ${
+              role === "provider"
+                ? "border-blue-600 bg-blue-50 text-blue-700"
+                : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            Caregiver
           </button>
         </div>
       </div>
@@ -218,7 +234,9 @@ export default function RegisterForm() {
       <Button type="submit" loading={loading}>
         {role === "parent"
           ? "Create Parent Account"
-          : "Create Child Account"}
+          : role === "child"
+          ? "Create Child Account"
+          : "Create Caregiver Account"}
       </Button>
     </form>
   );
