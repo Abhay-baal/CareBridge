@@ -18,7 +18,7 @@ const LiveMap = dynamic(
   }
 );
 
-const STALE_AFTER_MS = 2 * 60 * 1000;
+const STALE_AFTER_MS = 30000;
 
 export default function ChildLocationPage() {
   const [location, setLocation] = useState(null);
@@ -35,7 +35,6 @@ export default function ChildLocationPage() {
         }
 
         const response = await getParentLocation();
-
         setLocation(response.data);
         setError("");
       } catch (err) {
@@ -64,11 +63,11 @@ export default function ChildLocationPage() {
   }, [loadLocation]);
 
   useEffect(() => {
-    const timer = setInterval(() => {
+    const clock = setInterval(() => {
       setNow(Date.now());
     }, 5000);
 
-    return () => clearInterval(timer);
+    return () => clearInterval(clock);
   }, []);
 
   const updatedAt = location?.updatedAt
@@ -106,42 +105,38 @@ export default function ChildLocationPage() {
             ? `Approximate • ±${accuracy}m`
             : `Low accuracy • ±${accuracy}m`;
 
-  let status;
-
-  if (!isSharing) {
-    status = {
-      title: "Location sharing stopped",
-      description:
-        "Your parent is not currently sharing their location.",
-      className:
-        "border-gray-200 bg-gray-50 text-gray-700",
-      icon: "○",
-    };
-  } else if (isStale) {
-    status = {
-      title: "Location may be outdated",
-      description:
-        "The parent is sharing, but no recent GPS update has been received.",
-      className:
-        "border-amber-200 bg-amber-50 text-amber-700",
-      icon: "!",
-    };
-  } else {
-    status = {
-      title: "Parent location is live",
-      description:
-        "Showing the latest location received from your parent.",
-      className:
-        "border-emerald-200 bg-emerald-50 text-emerald-700",
-      icon: "●",
-    };
-  }
+  const status = !isSharing
+    ? {
+        title: "Location sharing stopped",
+        description:
+          "Your parent is not currently sharing their location.",
+        className:
+          "border-gray-200 bg-gray-50 text-gray-700",
+        icon: "○",
+      }
+    : isStale
+      ? {
+          title: "Location may be outdated",
+          description:
+            "The parent is sharing, but the latest GPS update is older than 30 seconds.",
+          className:
+            "border-amber-200 bg-amber-50 text-amber-700",
+          icon: "!",
+        }
+      : {
+          title: "Parent location is live",
+          description:
+            "Showing the latest location received from your parent.",
+          className:
+            "border-emerald-200 bg-emerald-50 text-emerald-700",
+          icon: "●",
+        };
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6">
       <div className="mx-auto max-w-2xl">
         <div className="mb-5">
-          <p className="text-sm font-semibold text-blue-600">
+          <p className="text-sm font-medium text-blue-600">
             CareBridge
           </p>
 
@@ -163,7 +158,6 @@ export default function ChildLocationPage() {
         {loading ? (
           <div className="rounded-3xl bg-white p-8 text-center shadow-sm">
             <div className="mx-auto h-10 w-10 animate-pulse rounded-full bg-blue-100" />
-
             <p className="mt-4 font-medium text-gray-800">
               Loading parent location...
             </p>
@@ -266,15 +260,16 @@ export default function ChildLocationPage() {
                 </div>
 
                 <p className="mt-1 text-xs leading-5 text-blue-700">
-                  This page checks for your parent's
-                  latest location every 5 seconds.
+                  CareBridge checks for your parent's
+                  latest location every 5 seconds while
+                  this page is open.
                 </p>
               </div>
 
               <button
                 onClick={() => loadLocation(true)}
                 disabled={refreshing}
-                className="mt-5 w-full rounded-2xl border border-gray-200 bg-white px-5 py-3 font-semibold text-gray-700 disabled:opacity-50"
+                className="mt-5 w-full rounded-2xl border border-gray-200 bg-white px-5 py-3 font-semibold text-gray-700 transition active:scale-[0.99] disabled:opacity-50"
               >
                 {refreshing
                   ? "Refreshing..."
@@ -284,7 +279,7 @@ export default function ChildLocationPage() {
               {location?.phone && (
                 <a
                   href={`tel:${location.phone}`}
-                  className="mt-3 block w-full rounded-2xl bg-blue-600 px-5 py-3 text-center font-semibold text-white"
+                  className="mt-3 block w-full rounded-2xl bg-blue-600 px-5 py-3 text-center font-semibold text-white transition active:scale-[0.99]"
                 >
                   Call Parent
                 </a>

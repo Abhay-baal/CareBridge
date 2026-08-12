@@ -64,6 +64,13 @@ export default function LoginForm() {
         localStorage.setItem("role", user.role);
       }
 
+      if (user?.id || user?._id) {
+        localStorage.setItem(
+          "userId",
+          user.id || user._id
+        );
+      }
+
       if (user) {
         localStorage.setItem("user", JSON.stringify(user));
       }

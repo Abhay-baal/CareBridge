@@ -1,43 +1,121 @@
+"use client";
+
+import { useEffect, useMemo } from "react";
+import {
+  Circle,
+  CircleMarker,
+  MapContainer,
+  Popup,
+  TileLayer,
+  useMap,
+} from "react-leaflet";
+
+function MapCenter({ latitude, longitude }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (
+      typeof latitude === "number" &&
+      typeof longitude === "number"
+    ) {
+      map.setView([latitude, longitude], Math.max(map.getZoom(), 16));
+    }
+  }, [latitude, longitude, map]);
+
+  return null;
+}
+
 export default function LiveMap({
   latitude,
   longitude,
+  accuracy,
+  parentName = "Parent",
 }) {
-  if (
-    latitude === null ||
-    latitude === undefined ||
-    longitude === null ||
-    longitude === undefined
-  ) {
+  const position = useMemo(() => {
+    if (
+      typeof latitude !== "number" ||
+      typeof longitude !== "number"
+    ) {
+      return null;
+    }
+
+    return [latitude, longitude];
+  }, [latitude, longitude]);
+
+  if (!position) {
     return (
-      <div className="flex h-72 items-center justify-center rounded-2xl bg-gray-100 text-sm text-gray-500">
-        Waiting for location...
+      <div className="flex h-80 items-center justify-center rounded-2xl bg-slate-100">
+        <div className="text-center">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-2xl">
+            📍
+          </div>
+          <p className="font-semibold text-gray-900">
+            Waiting for location
+          </p>
+          <p className="mt-1 text-sm text-gray-500">
+            Start location sharing to see the live map.
+          </p>
+        </div>
       </div>
     );
   }
 
+  const accuracyRadius =
+    typeof accuracy === "number" && accuracy > 0
+      ? Math.min(accuracy, 500)
+      : null;
+
   return (
-    <div className="flex h-72 items-center justify-center rounded-2xl bg-gray-100">
-      <div className="text-center">
-        <div className="mb-3 text-5xl">📍</div>
+    <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
+      <MapContainer
+        center={position}
+        zoom={16}
+        scrollWheelZoom
+        className="h-80 w-full"
+      >
+        <TileLayer
+          attribution='&copy; OpenStreetMap contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
 
-        <p className="font-semibold">
-          Live Location
-        </p>
+        <MapCenter
+          latitude={latitude}
+          longitude={longitude}
+        />
 
-        <p className="mt-2 text-xs text-gray-500">
-          {latitude.toFixed(6)},{" "}
-          {longitude.toFixed(6)}
-        </p>
+        {accuracyRadius && (
+          <Circle
+            center={position}
+            radius={accuracyRadius}
+            pathOptions={{
+              color: "#2563eb",
+              fillColor: "#3b82f6",
+              fillOpacity: 0.12,
+              weight: 1,
+            }}
+          />
+        )}
 
-        <a
-          href={`https://www.google.com/maps?q=${latitude},${longitude}`}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-4 inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm text-white"
+        <CircleMarker
+          center={position}
+          radius={10}
+          pathOptions={{
+            color: "#ffffff",
+            weight: 4,
+            fillColor: "#2563eb",
+            fillOpacity: 1,
+          }}
         >
-          Open Google Maps
-        </a>
-      </div>
+          <Popup>
+            <strong>{parentName}</strong>
+            <br />
+            Current location
+            {accuracyRadius
+              ? ` • ±${Math.round(accuracyRadius)}m`
+              : ""}
+          </Popup>
+        </CircleMarker>
+      </MapContainer>
     </div>
   );
 }

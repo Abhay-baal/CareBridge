@@ -2,9 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useContext } from "react";
+import { BottomNavContext } from "@/components/layout/BottomNavContext";
 
 export default function BottomNavigation() {
   const pathname = usePathname();
+  const { showBottomNav } = useContext(BottomNavContext);
+
+  if (!showBottomNav) return null;
 
   const navigationItems = [
     {
