@@ -14,11 +14,25 @@ const {
   authorize,
 } = require("../middleware/authMiddleware");
 
-router.use(authenticate, authorize("child"));
+/*
+ * Both Parent and Child are allowed.
+ *
+ * The controller decides which Parent profile they can access:
+ *
+ * Parent -> own profile
+ * Child  -> currently active parent
+ */
+router.use(
+  authenticate,
+  authorize("parent", "child")
+);
 
 router.get("/", getContacts);
+
 router.post("/", createContact);
+
 router.put("/:id", updateContact);
+
 router.delete("/:id", deleteContact);
 
 module.exports = router;
