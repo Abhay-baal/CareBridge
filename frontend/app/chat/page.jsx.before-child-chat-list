@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useContext } from "react";
+
+import { useEffect, useRef, useState } from "react";
+import { useContext } from "react";
 import Link from "next/link";
 import { BottomNavContext } from "@/components/layout/BottomNavContext";
 
@@ -126,38 +128,21 @@ const ConversationList = ({
   previews,
   selectedId,
   onSelect,
-  role,
   showHeader = true,
 }) => {
-  const isParent = role === "parent";
-
-  const title = isParent
-    ? "Chat"
-    : "Chat";
-
-  const subtitle = isParent
-    ? "Message your connected children"
-    : "Message your connected parents";
-
-  const emptyTitle = isParent
-    ? "No connected children"
-    : "No connected parents";
-
-  const emptyMessage = isParent
-    ? "Connect a child to start chatting."
-    : "Connect a parent to start chatting.";
 
   return (
     <div className="flex h-full flex-col bg-white">
       {showHeader && (
         <div className="border-b px-5 pb-4 pt-5">
           <h1 className="text-2xl font-bold text-gray-900">
-            {title}
+            Chat
           </h1>
 
           <p className="mt-1 text-sm text-gray-500">
-            {subtitle}
+            Message your connected children
           </p>
+
         </div>
       )}
 
@@ -170,22 +155,18 @@ const ConversationList = ({
               </div>
 
               <h2 className="font-semibold text-gray-900">
-                {emptyTitle}
+                No connected children
               </h2>
 
               <p className="mt-1 text-sm text-gray-500">
-                {emptyMessage}
+                Connect a child to start chatting.
               </p>
             </div>
           </div>
         ) : (
           relationships.map((relationship) => {
-            const person = isParent
-              ? relationship.child
-              : relationship.parent;
-
+            const child = relationship.child;
             const preview = previews[relationship._id];
-
             const isSelected =
               relationship._id === selectedId;
 
@@ -193,21 +174,23 @@ const ConversationList = ({
               <button
                 key={relationship._id}
                 type="button"
-                onClick={() => onSelect(relationship)}
+                onClick={() =>
+                  onSelect(relationship)
+                }
                 className={`flex w-full items-center gap-3 border-b px-5 py-4 text-left transition-colors ${
                   isSelected
                     ? "bg-blue-50"
                     : "bg-white hover:bg-gray-50"
                 }`}
               >
-                <Avatar user={person} />
+                <Avatar user={child} />
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-3">
                     <h2 className="truncate font-semibold text-gray-900">
                       {getDisplayName(
-                        person,
-                        isParent ? "Child" : "Parent"
+                        child,
+                        "Child"
                       )}
                     </h2>
 
@@ -219,7 +202,8 @@ const ConversationList = ({
                   </div>
 
                   <p className="mt-1 truncate text-sm text-gray-500">
-                    {preview?.message || "Start a conversation"}
+                    {preview?.message ||
+                      "Start a conversation"}
                   </p>
                 </div>
               </button>
@@ -371,10 +355,7 @@ const EmptyState = ({ person }) => (
 
       <p className="mt-1 text-sm text-gray-500">
         Send a message to{" "}
-        {getDisplayName(
-          person,
-          "your connection"
-        )}.
+        {getDisplayName(person, "your connection")}.
       </p>
     </div>
   </div>
@@ -395,6 +376,7 @@ export default function ChatPage() {
 
   const [message, setMessage] = useState("");
 
+
   const [loadingRelationships, setLoadingRelationships] =
     useState(true);
 
@@ -406,9 +388,6 @@ export default function ChatPage() {
   const [error, setError] = useState("");
 
   const bottomRef = useRef(null);
-
-  const { setShowBottomNav } =
-    useContext(BottomNavContext);
 
   useEffect(() => {
     const storedRole =
@@ -444,9 +423,7 @@ export default function ChatPage() {
 
       if (conversation.length > 0) {
         const lastMessage =
-          conversation[
-            conversation.length - 1
-          ];
+          conversation[conversation.length - 1];
 
         setPreviews((current) => ({
           ...current,
@@ -525,7 +502,18 @@ export default function ChatPage() {
         if (!mounted) return;
 
         if (data.length > 0) {
-          await loadAllPreviews(data);
+          if (role === "child") {
+            const active =
+              data.find(
+                (item) => item.active
+              ) || data[0];
+
+            setSelectedRelationship(
+              active
+            );
+          } else {
+            await loadAllPreviews(data);
+          }
         }
       } catch (err) {
         if (mounted) {
@@ -575,18 +563,12 @@ export default function ChatPage() {
     });
   }, [messages]);
 
-  useEffect(() => {
-    // Show bottom navigation on the chat list.
-    // Hide it only while viewing an active conversation.
-    setShowBottomNav(!selectedRelationship);
+  const { setShowBottomNav } = useContext(BottomNavContext);
 
-    return () => {
-      setShowBottomNav(true);
-    };
-  }, [
-    selectedRelationship,
-    setShowBottomNav,
-  ]);
+  useEffect(() => {
+    // hide bottom navigation when viewing an active conversation
+    setShowBottomNav(!selectedRelationship);
+  }, [selectedRelationship, setShowBottomNav]);
 
   const sendMessage = async (e) => {
     e.preventDefault();
@@ -624,6 +606,11 @@ export default function ChatPage() {
     }
   };
 
+  const selectedPerson =
+    role === "child"
+      ? selectedRelationship?.parent
+      : selectedRelationship?.child;
+
   if (!role) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -636,95 +623,6 @@ export default function ChatPage() {
 
   const isParent = role === "parent";
 
-  const selectedPerson = isParent
-    ? selectedRelationship?.child
-    : selectedRelationship?.parent;
-
-  /*
-   * IMPORTANT:
-   * Both parent and child now start on the
-   * conversation list.
-   *
-   * Parent -> connected children
-   * Child  -> connected parents
-   */
-  if (!selectedRelationship) {
-    return (
-      <main className="min-h-screen bg-gray-50">
-        {error && (
-          <div className="mx-auto max-w-5xl px-4 pt-3">
-            <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
-              {error}
-            </div>
-          </div>
-        )}
-
-        <div className="mx-auto flex h-[calc(100vh-0px)] max-w-5xl flex-col overflow-hidden border-x border-gray-200 bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b px-6 py-4">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">
-                Chat
-              </h2>
-
-              <p className="mt-1 text-sm text-gray-500">
-                {isParent
-                  ? "Choose a child to start chatting"
-                  : "Choose a parent to start chatting"}
-              </p>
-            </div>
-
-            <Link
-              href={
-                isParent
-                  ? "/dashboard"
-                  : "/child/dashboard"
-              }
-              className="ml-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-blue-500 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:from-blue-700 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="h-4 w-4"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-
-              <span className="hidden md:inline">
-                {isParent
-                  ? "Back to Dashboard"
-                  : "Back to Child Dashboard"}
-              </span>
-            </Link>
-          </div>
-
-          {loadingRelationships ? (
-            <div className="flex flex-1 items-center justify-center">
-              <div className="text-sm text-gray-500">
-                Loading conversations...
-              </div>
-            </div>
-          ) : (
-            <ConversationList
-              relationships={relationships}
-              previews={previews}
-              selectedId={null}
-              onSelect={setSelectedRelationship}
-              role={role}
-              showHeader={false}
-            />
-          )}
-        </div>
-      </main>
-    );
-  }
-
   return (
     <main className="min-h-screen bg-gray-50">
       {error && (
@@ -735,97 +633,139 @@ export default function ChatPage() {
         </div>
       )}
 
-      <div className="mx-auto flex h-screen max-w-5xl overflow-hidden border-x border-gray-200 bg-white shadow-sm">
-        {isParent && (
-          <aside className="hidden w-[340px] shrink-0 border-r border-gray-200 md:block">
-            <ConversationList
-              relationships={relationships}
-              previews={previews}
-              selectedId={
-                selectedRelationship?._id
-              }
-              onSelect={
-                setSelectedRelationship
-              }
-              role={role}
-            />
-          </aside>
-        )}
-
-        <section className="flex min-w-0 flex-1 flex-col">
-          <ChatHeader
-            person={selectedPerson}
-            role={role}
-            onBack={() =>
-              setSelectedRelationship(null)
-            }
-          />
-
-          <div className="flex-1 overflow-y-auto px-4 py-5 pb-24">
-            {loadingMessages ? (
-              <div className="flex h-full items-center justify-center">
-                <div className="text-sm text-gray-500">
-                  Loading conversation...
-                </div>
-              </div>
-            ) : messages.length === 0 ? (
-              <EmptyState
-                person={selectedPerson}
-              />
-            ) : (
-              <div className="space-y-3">
-                {messages.map((item) => {
-                  const mine =
-                    item.sender?._id ===
-                    getUserId();
-
-                  return (
-                    <MessageBubble
-                      key={item._id}
-                      item={item}
-                      mine={mine}
-                    />
-                  );
-                })}
-
-                <div ref={bottomRef} />
-              </div>
-            )}
-          </div>
-
-          <form
-            onSubmit={sendMessage}
-            className="border-t bg-white p-3"
-          >
-            <div className="flex gap-2">
-              <input
-                value={message}
-                onChange={(e) =>
-                  setMessage(
-                    e.target.value
-                  )
-                }
-                placeholder="Type a message..."
-                disabled={sending}
-                className="min-w-0 flex-1 rounded-full border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
-
-              <button
-                type="submit"
-                disabled={
-                  sending ||
-                  !message.trim()
-                }
-                className="rounded-full bg-blue-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {sending
-                  ? "..."
-                  : "Send"}
-              </button>
+      {isParent && !selectedRelationship ? (
+        <div className="mx-auto h-[calc(100vh-0px)] max-w-5xl overflow-hidden border-x border-gray-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b px-6 py-4">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Chat</h2>
+              <p className="mt-1 text-sm text-gray-500">Message your connected children</p>
             </div>
-          </form>
-        </section>
-      </div>
+
+            <Link href="/dashboard" className="ml-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-blue-500 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:from-blue-700 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              <span className="hidden md:inline">Back to Dashboard</span>
+            </Link>
+          </div>
+          {loadingRelationships ? (
+            <div className="flex h-full items-center justify-center">
+              <div className="text-sm text-gray-500">
+                Loading conversations...
+              </div>
+            </div>
+            ) : (
+              <ConversationList
+                  relationships={relationships}
+                  previews={previews}
+                  selectedId={null}
+                  onSelect={setSelectedRelationship}
+                  showHeader={false}
+                />
+            )}
+        </div>
+      ) : (
+        <div className="mx-auto flex h-screen max-w-5xl overflow-hidden border-x border-gray-200 bg-white shadow-sm">
+          {isParent && (
+            <aside className="hidden w-[340px] shrink-0 border-r border-gray-200 md:block">
+              <ConversationList
+                relationships={
+                  relationships
+                }
+                previews={previews}
+                selectedId={
+                  selectedRelationship?._id
+                }
+                onSelect={
+                  setSelectedRelationship
+                }
+                showHeader={false}
+              />
+            </aside>
+          )}
+
+          <section className="flex min-w-0 flex-1 flex-col">
+            <ChatHeader
+              person={selectedPerson}
+              role={role}
+              onBack={
+                isParent
+                  ? () =>
+                      setSelectedRelationship(
+                        null
+                      )
+                  : null
+              }
+            />
+
+            <div className="flex-1 overflow-y-auto px-4 py-5 pb-24">
+              {loadingMessages ? (
+                <div className="flex h-full items-center justify-center">
+                  <div className="text-sm text-gray-500">
+                    Loading conversation...
+                  </div>
+                </div>
+              ) : messages.length === 0 ? (
+                <EmptyState
+                  person={selectedPerson}
+                />
+              ) : (
+                <div className="space-y-3">
+                  {messages.map((item) => {
+                    const mine =
+                      item.sender?._id ===
+                      getUserId();
+
+                    return (
+                      <MessageBubble
+                        key={item._id}
+                        item={item}
+                        mine={mine}
+                      />
+                    );
+                  })}
+
+                  <div ref={bottomRef} />
+                </div>
+              )}
+            </div>
+
+            {selectedRelationship && (
+              <form
+                onSubmit={sendMessage}
+                className="border-t bg-white p-3"
+              >
+                <div className="flex gap-2">
+                  <input
+                    value={message}
+                    onChange={(e) =>
+                      setMessage(
+                        e.target.value
+                      )
+                    }
+                    placeholder="Type a message..."
+                    disabled={sending}
+                    className="min-w-0 flex-1 rounded-full border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={
+                      sending ||
+                      !message.trim()
+                    }
+                    className="rounded-full bg-blue-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {sending
+                      ? "..."
+                      : "Send"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </section>
+        </div>
+      )}
     </main>
   );
 }

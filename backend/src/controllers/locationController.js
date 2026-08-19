@@ -1,22 +1,22 @@
 const Parent = require("../models/Parent");
 const ParentChild = require("../models/ParentChild");
 
-const getRelationshipForUser = async (req) => {
-  return ParentChild.findOne({
-    active: true,
-    $or: [
-      { parent: req.user.id },
-      { child: req.user.id },
-    ],
-  });
-};
-
 const getParentProfile = async (parentUserId) => {
   return Parent.findOne({
     user: parentUserId,
-  }).populate(
-    "user",
-    "fullName phone email"
+  }).populate("user", "fullName phone email");
+};
+
+const validateCoordinates = (latitude, longitude) => {
+  return (
+    typeof latitude === "number" &&
+    typeof longitude === "number" &&
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180
   );
 };
 
@@ -42,10 +42,7 @@ const startSharing = async (req, res) => {
 
     const { latitude, longitude, accuracy } = req.body;
 
-    if (
-      typeof latitude !== "number" ||
-      typeof longitude !== "number"
-    ) {
+    if (!validateCoordinates(latitude, longitude)) {
       return res.status(400).json({
         success: false,
         message: "Valid latitude and longitude are required",
@@ -55,7 +52,9 @@ const startSharing = async (req, res) => {
     parent.latitude = latitude;
     parent.longitude = longitude;
     parent.accuracy =
-      typeof accuracy === "number" ? accuracy : null;
+      typeof accuracy === "number" && Number.isFinite(accuracy)
+        ? accuracy
+        : null;
     parent.isSharing = true;
     parent.locationUpdatedAt = new Date();
 
@@ -68,7 +67,7 @@ const startSharing = async (req, res) => {
         latitude: parent.latitude,
         longitude: parent.longitude,
         accuracy: parent.accuracy,
-        isSharing: parent.isSharing,
+        isSharing: true,
         updatedAt: parent.locationUpdatedAt,
       },
     });
@@ -111,10 +110,7 @@ const updateLocation = async (req, res) => {
 
     const { latitude, longitude, accuracy } = req.body;
 
-    if (
-      typeof latitude !== "number" ||
-      typeof longitude !== "number"
-    ) {
+    if (!validateCoordinates(latitude, longitude)) {
       return res.status(400).json({
         success: false,
         message: "Valid latitude and longitude are required",
@@ -124,7 +120,9 @@ const updateLocation = async (req, res) => {
     parent.latitude = latitude;
     parent.longitude = longitude;
     parent.accuracy =
-      typeof accuracy === "number" ? accuracy : null;
+      typeof accuracy === "number" && Number.isFinite(accuracy)
+        ? accuracy
+        : null;
     parent.locationUpdatedAt = new Date();
 
     await parent.save();
@@ -135,7 +133,7 @@ const updateLocation = async (req, res) => {
         latitude: parent.latitude,
         longitude: parent.longitude,
         accuracy: parent.accuracy,
-        isSharing: parent.isSharing,
+        isSharing: true,
         updatedAt: parent.locationUpdatedAt,
       },
     });
@@ -179,6 +177,7 @@ const stopSharing = async (req, res) => {
       message: "Location sharing stopped",
       data: {
         isSharing: false,
+        updatedAt: parent.locationUpdatedAt,
       },
     });
   } catch (error) {
@@ -193,18 +192,32 @@ const stopSharing = async (req, res) => {
 
 const getSharedLocation = async (req, res) => {
   try {
-    const relationship = await getRelationshipForUser(req);
+    let parentUserId;
 
-    if (!relationship) {
-      return res.status(404).json({
+    if (req.user.role === "parent") {
+      parentUserId = req.user.id;
+    } else if (req.user.role === "child") {
+      const relationship = await ParentChild.findOne({
+        child: req.user.id,
+        active: true,
+      });
+
+      if (!relationship) {
+        return res.status(404).json({
+          success: false,
+          message: "No active parent-child relationship found",
+        });
+      }
+
+      parentUserId = relationship.parent;
+    } else {
+      return res.status(403).json({
         success: false,
-        message: "No active parent-child relationship found",
+        message: "Access denied",
       });
     }
 
-    const parent = await getParentProfile(
-      relationship.parent
-    );
+    const parent = await getParentProfile(parentUserId);
 
     if (!parent) {
       return res.status(404).json({
@@ -219,11 +232,11 @@ const getSharedLocation = async (req, res) => {
         parentName: parent.user?.fullName,
         phone: parent.user?.phone,
         address: parent.address,
-        latitude: parent.latitude || null,
-        longitude: parent.longitude || null,
-        accuracy: parent.accuracy || null,
-        isSharing: parent.isSharing || false,
-        updatedAt: parent.locationUpdatedAt || null,
+        latitude: parent.latitude ?? null,
+        longitude: parent.longitude ?? null,
+        accuracy: parent.accuracy ?? null,
+        isSharing: parent.isSharing === true,
+        updatedAt: parent.locationUpdatedAt ?? null,
       },
     });
   } catch (error) {

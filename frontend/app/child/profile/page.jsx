@@ -5,6 +5,7 @@ import Link from "next/link";
 
 export default function ChildProfilePage() {
   const [user, setUser] = useState(null);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     try {
@@ -17,6 +18,17 @@ export default function ChildProfilePage() {
       console.error("Unable to load child profile:", error);
     }
   }, []);
+
+  const handleLogout = () => {
+    setLoggingOut(true);
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("user");
+
+    window.location.href = "/login";
+  };
 
   return (
     <main className="min-h-screen bg-gray-50 px-4 pb-28 pt-6">
@@ -90,6 +102,17 @@ export default function ChildProfilePage() {
           >
             Back to Dashboard
           </Link>
+
+          <div className="mt-6 border-t pt-6">
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-50"
+            >
+              {loggingOut ? "Logging out..." : "Logout"}
+            </button>
+          </div>
         </div>
       </div>
     </main>

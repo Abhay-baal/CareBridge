@@ -15,7 +15,7 @@ const navigation = [
     icon: "👨‍👩‍👧",
   },
   {
-    href: "/chat",
+    href: "/child/chat",
     label: "Chat",
     icon: "💬",
   },
