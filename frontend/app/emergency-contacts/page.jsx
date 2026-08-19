@@ -28,6 +28,7 @@ export default function EmergencyContactsPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [error, setError] = useState("");
 
   const loadContacts = async () => {
@@ -36,14 +37,15 @@ export default function EmergencyContactsPage() {
 
       const response = await getEmergencyContacts();
 
-      setContacts(response.data || []);
+      setContacts(response?.data || []);
     } catch (error) {
-      console.error("Emergency contacts error:", error);
+      console.error("Failed to load emergency contacts:", error);
 
-      setError(
+      const message =
         error.response?.data?.message ||
-          "Failed to load emergency contacts"
-      );
+        "Failed to load emergency contacts.";
+
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -57,56 +59,76 @@ export default function EmergencyContactsPage() {
     setForm(emptyForm);
     setEditingId(null);
     setShowForm(false);
+    setError("");
+  };
+
+  const handleAdd = () => {
+    setForm(emptyForm);
+    setEditingId(null);
+    setError("");
+    setShowForm(true);
+  };
+
+  const handleCancel = () => {
+    resetForm();
+  };
+
+  const handleEdit = (contact) => {
+    setForm({
+      name: contact?.name || "",
+      relation: contact?.relation || "",
+      phone: contact?.phone || "",
+    });
+
+    setEditingId(contact?._id);
+    setShowForm(true);
+    setError("");
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+    const name = form.name.trim();
+    const relation = form.relation.trim();
+    const phone = form.phone.trim();
+
+    if (!name || !relation || !phone) {
+      setError("Please fill in all fields.");
+      return;
+    }
+
     try {
       setSaving(true);
       setError("");
 
+      const payload = {
+        name,
+        relation,
+        phone,
+      };
+
       if (editingId) {
-        await updateEmergencyContact(editingId, form);
-
-        toast.success(
-          "Emergency contact updated successfully."
-        );
+        await updateEmergencyContact(editingId, payload);
+        toast.success("Emergency contact updated.");
       } else {
-        await createEmergencyContact(form);
-
-        toast.success(
-          "Emergency contact added successfully."
-        );
+        await createEmergencyContact(payload);
+        toast.success("Emergency contact added.");
       }
 
       resetForm();
-
       await loadContacts();
     } catch (error) {
-      console.error("Save emergency contact error:", error);
+      console.error("Failed to save emergency contact:", error);
 
       const message =
         error.response?.data?.message ||
-        "Failed to save emergency contact";
+        "Failed to save emergency contact.";
 
       setError(message);
       toast.error(message);
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleEdit = (contact) => {
-    setForm({
-      name: contact.name || "",
-      relation: contact.relation || "",
-      phone: contact.phone || "",
-    });
-
-    setEditingId(contact._id);
-    setShowForm(true);
-    setError("");
   };
 
   const handleDelete = async (id) => {
@@ -119,24 +141,29 @@ export default function EmergencyContactsPage() {
     }
 
     try {
+      setDeletingId(id);
       setError("");
 
       await deleteEmergencyContact(id);
 
-      toast.success(
-        "Emergency contact deleted successfully."
-      );
+      toast.success("Emergency contact deleted.");
+
+      if (editingId === id) {
+        resetForm();
+      }
 
       await loadContacts();
     } catch (error) {
-      console.error("Delete emergency contact error:", error);
+      console.error("Failed to delete emergency contact:", error);
 
       const message =
         error.response?.data?.message ||
-        "Failed to delete emergency contact";
+        "Failed to delete emergency contact.";
 
       setError(message);
       toast.error(message);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -144,134 +171,218 @@ export default function EmergencyContactsPage() {
     <AppLayout>
       <PageHeader
         title="Emergency Contacts"
-        subtitle="Manage trusted contacts for your child."
+        subtitle="Manage trusted contacts for emergencies."
       />
 
-      <div className="mb-5 flex justify-end">
-        <button
-          type="button"
-          onClick={() => {
-            if (showForm) {
-              resetForm();
-            } else {
-              setForm(emptyForm);
-              setEditingId(null);
-              setShowForm(true);
-            }
-          }}
-          className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
-        >
-          {showForm ? "Cancel" : "+ Add Contact"}
-        </button>
-      </div>
-
-      {error && (
-        <div className="mb-4 rounded-2xl bg-red-50 p-4 text-sm text-red-600">
-          {error}
-        </div>
-      )}
-
-      {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="mb-5 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
-        >
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">
-            {editingId
-              ? "Edit Emergency Contact"
-              : "Add Emergency Contact"}
-          </h2>
-
-          <div className="space-y-3">
-            <input
-              required
-              type="text"
-              placeholder="Full name"
-              value={form.name}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  name: event.target.value,
-                })
-              }
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500"
-            />
-
-            <input
-              required
-              type="text"
-              placeholder="Relation"
-              value={form.relation}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  relation: event.target.value,
-                })
-              }
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500"
-            />
-
-            <input
-              required
-              type="tel"
-              placeholder="Phone number"
-              value={form.phone}
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  phone: event.target.value,
-                })
-              }
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500"
-            />
-
+      <div className="mx-auto w-full max-w-2xl">
+        {/* Header Action */}
+        {!showForm && (
+          <div className="mb-5 flex justify-end">
             <button
-              type="submit"
-              disabled={saving}
-              className="w-full rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              onClick={handleAdd}
+              className="shrink-0 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 active:scale-95"
             >
-              {saving
-                ? "Saving..."
-                : editingId
-                ? "Update Contact"
-                : "Save Contact"}
+              + Add Contact
             </button>
           </div>
-        </form>
-      )}
+        )}
 
-      {loading ? (
-        <div className="rounded-2xl bg-white p-6 text-center shadow-sm">
-          <p className="text-sm text-gray-500">
-            Loading emergency contacts...
-          </p>
-        </div>
-      ) : contacts.length === 0 ? (
-        <div className="rounded-2xl bg-white p-6 text-center shadow-sm">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-xl">
-            📞
+        {/* Error */}
+        {error && (
+          <div
+            role="alert"
+            className="mb-4 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-600"
+          >
+            {error}
           </div>
+        )}
 
-          <h2 className="font-semibold text-gray-900">
-            No Emergency Contacts
-          </h2>
+        {/* Add / Edit Form */}
+        {showForm && (
+          <form
+            onSubmit={handleSubmit}
+            className="mb-5 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+          >
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">
+                  {editingId
+                    ? "Edit Emergency Contact"
+                    : "Add Emergency Contact"}
+                </h2>
 
-          <p className="mt-1 text-sm text-gray-500">
-            Add trusted contacts that your child can quickly reach.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {contacts.map((contact) => (
-            <EmergencyContactCard
-              key={contact._id}
-              contact={contact}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
-      )}
+                <p className="mt-1 text-xs text-gray-500">
+                  Enter the contact details below.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={saving}
+                className="rounded-lg px-2 py-1 text-sm font-medium text-gray-500 transition hover:bg-gray-100 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {/* Name */}
+              <div>
+                <label
+                  htmlFor="parent-emergency-name"
+                  className="mb-1.5 block text-sm font-medium text-gray-700"
+                >
+                  Name
+                </label>
+
+                <input
+                  id="parent-emergency-name"
+                  required
+                  type="text"
+                  placeholder="e.g. Raj Kumar"
+                  value={form.name}
+                  onChange={(event) =>
+                    setForm((previous) => ({
+                      ...previous,
+                      name: event.target.value,
+                    }))
+                  }
+                  disabled={saving}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50"
+                />
+              </div>
+
+              {/* Relation */}
+              <div>
+                <label
+                  htmlFor="parent-emergency-relation"
+                  className="mb-1.5 block text-sm font-medium text-gray-700"
+                >
+                  Relation
+                </label>
+
+                <input
+                  id="parent-emergency-relation"
+                  required
+                  type="text"
+                  placeholder="e.g. Doctor, Neighbour, Uncle"
+                  value={form.relation}
+                  onChange={(event) =>
+                    setForm((previous) => ({
+                      ...previous,
+                      relation: event.target.value,
+                    }))
+                  }
+                  disabled={saving}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50"
+                />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label
+                  htmlFor="parent-emergency-phone"
+                  className="mb-1.5 block text-sm font-medium text-gray-700"
+                >
+                  Phone Number
+                </label>
+
+                <input
+                  id="parent-emergency-phone"
+                  required
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="e.g. 9876543210"
+                  value={form.phone}
+                  onChange={(event) =>
+                    setForm((previous) => ({
+                      ...previous,
+                      phone: event.target.value,
+                    }))
+                  }
+                  disabled={saving}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50"
+                />
+              </div>
+            </div>
+
+            {/* Form Actions */}
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={saving}
+                className="flex-1 rounded-xl bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-200 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={saving}
+                className="flex-1 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saving
+                  ? "Saving..."
+                  : editingId
+                  ? "Update Contact"
+                  : "Save Contact"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Loading */}
+        {loading ? (
+          <div className="rounded-2xl border border-gray-100 bg-white p-6 text-center shadow-sm">
+            <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-blue-600" />
+
+            <p className="mt-3 text-sm text-gray-500">
+              Loading emergency contacts...
+            </p>
+          </div>
+        ) : contacts.length === 0 ? (
+          /* Empty State */
+          <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center shadow-sm">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-2xl">
+              🚨
+            </div>
+
+            <h2 className="mt-4 text-lg font-bold text-gray-900">
+              No Emergency Contacts
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Add someone you can quickly reach during an emergency.
+            </p>
+
+            {!showForm && (
+              <button
+                type="button"
+                onClick={handleAdd}
+                className="mt-5 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-95"
+              >
+                + Add Emergency Contact
+              </button>
+            )}
+          </div>
+        ) : (
+          /* Contact List */
+          <div className="space-y-3">
+            {contacts.map((contact) => (
+              <EmergencyContactCard
+                key={contact._id}
+                contact={contact}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                deleting={deletingId === contact._id}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </AppLayout>
   );
 }
