@@ -181,6 +181,9 @@ export default function DashboardPage() {
     <AppLayout>
       <WelcomeHeader name={parentName} />
 
+      <FamilyCommunication />
+
+
       <section className="mt-6">
         <h2 className="mb-3 text-lg font-semibold text-gray-900">
           Quick Actions
@@ -284,8 +287,6 @@ export default function DashboardPage() {
         />
       </section>
 
-
-      <FamilyCommunication />
 
       <FloatingActionButton />
     </AppLayout>

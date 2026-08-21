@@ -297,6 +297,78 @@ export default function FamilyCommunication() {
   return (
     <section className="mt-6 space-y-5">
 
+      {/* RECENT FAMILY MESSAGES */}
+      <div className="rounded-2xl border bg-white p-5 shadow-sm">
+
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-gray-900">
+            💌 Family Message
+          </h2>
+
+          <span className="text-xs text-gray-400">
+            Latest 30
+          </span>
+        </div>
+
+        {messages.length === 0 ? (
+          <div className="mt-4 rounded-xl bg-gray-50 p-5 text-center">
+            <div className="text-2xl">💬</div>
+
+            <p className="mt-2 text-sm text-gray-500">
+              No family messages yet.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {messages.slice(0, 10).map((item) => {
+              const sender = item.sender;
+              const senderId = getUserId(sender);
+
+              const isMine =
+                senderId.toString() ===
+                currentUserId.toString();
+
+              return (
+                <div
+                  key={item._id}
+                  className={`rounded-xl p-3 ${
+                    isMine
+                      ? "bg-blue-50"
+                      : "bg-gray-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm shadow-sm">
+                      {getRoleEmoji(sender?.role)}
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {isMine
+                          ? "You"
+                          : sender?.fullName ||
+                            "Family Member"}
+                      </p>
+
+                      <p className="text-[10px] text-gray-400">
+                        {new Date(
+                          item.createdAt
+                        ).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-gray-700">
+                    {item.message}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+
       {/* FAMILY MESSAGE */}
       <div className="rounded-2xl border bg-white p-5 shadow-sm">
 
@@ -398,77 +470,6 @@ export default function FamilyCommunication() {
         >
           {sending ? "Sending..." : "Send 💌"}
         </button>
-      </div>
-
-      {/* RECENT FAMILY MESSAGES */}
-      <div className="rounded-2xl border bg-white p-5 shadow-sm">
-
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900">
-            💌 Recent Family Messages
-          </h2>
-
-          <span className="text-xs text-gray-400">
-            Latest 30
-          </span>
-        </div>
-
-        {messages.length === 0 ? (
-          <div className="mt-4 rounded-xl bg-gray-50 p-5 text-center">
-            <div className="text-2xl">💬</div>
-
-            <p className="mt-2 text-sm text-gray-500">
-              No family messages yet.
-            </p>
-          </div>
-        ) : (
-          <div className="mt-4 space-y-3">
-            {messages.slice(0, 10).map((item) => {
-              const sender = item.sender;
-              const senderId = getUserId(sender);
-
-              const isMine =
-                senderId.toString() ===
-                currentUserId.toString();
-
-              return (
-                <div
-                  key={item._id}
-                  className={`rounded-xl p-3 ${
-                    isMine
-                      ? "bg-blue-50"
-                      : "bg-gray-50"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm shadow-sm">
-                      {getRoleEmoji(sender?.role)}
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">
-                        {isMine
-                          ? "You"
-                          : sender?.fullName ||
-                            "Family Member"}
-                      </p>
-
-                      <p className="text-[10px] text-gray-400">
-                        {new Date(
-                          item.createdAt
-                        ).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-gray-700">
-                    {item.message}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       {/* FAMILY SNAPS */}

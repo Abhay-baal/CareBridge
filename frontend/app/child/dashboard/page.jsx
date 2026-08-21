@@ -124,6 +124,9 @@ export default function ChildDashboard() {
         parentName={parent?.user?.fullName}
       />
 
+      <FamilyCommunication />
+
+
       <ParentSelector />
 
       <ParentSummaryCard
@@ -155,7 +158,6 @@ export default function ChildDashboard() {
         onToggle={handleToggleTask}
       />
 
-      <FamilyCommunication />
 
     </div>
   );
