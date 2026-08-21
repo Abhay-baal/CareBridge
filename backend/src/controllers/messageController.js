@@ -4,7 +4,6 @@ const ParentChild = require("../models/ParentChild");
 const getRelationshipForUser = async (req, relationshipId) => {
   return ParentChild.findOne({
     _id: relationshipId,
-    active: true,
     $or: [
       { parent: req.user.id },
       { child: req.user.id },
