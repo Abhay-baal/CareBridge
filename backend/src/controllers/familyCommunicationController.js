@@ -1,4 +1,5 @@
 const FamilyMessage = require("../models/FamilyMessage");
+const FamilyMessageStreak = require("../models/FamilyMessageStreak");
 const FamilySnap = require("../models/FamilySnap");
 const ParentChild = require("../models/ParentChild");
 const User = require("../models/User");
@@ -50,6 +51,106 @@ const getFamilyMemberIds = async (userId) => {
   }
 
   return [...visited];
+};
+
+
+const getFamilyKey = (ids) =>
+  [...new Set(ids.map(String))].sort().join(":");
+
+const getDayKey = (date) => {
+  const value = new Date(date);
+
+  return `${value.getUTCFullYear()}-${String(
+    value.getUTCMonth() + 1
+  ).padStart(2, "0")}-${String(value.getUTCDate()).padStart(
+    2,
+    "0"
+  )}`;
+};
+
+const getPreviousDayKey = (date) => {
+  const value = new Date(date);
+  value.setUTCDate(value.getUTCDate() - 1);
+  return getDayKey(value);
+};
+
+const updateFamilyMessageStreak = async (familyIds) => {
+  const familyKey = getFamilyKey(familyIds);
+  const now = new Date();
+
+  let streak = await FamilyMessageStreak.findOne({
+    familyKey,
+  });
+
+  if (!streak) {
+    streak = await FamilyMessageStreak.create({
+      familyKey,
+      currentStreak: 1,
+      longestStreak: 1,
+      lastMessageDate: now,
+    });
+
+    return streak;
+  }
+
+  const today = getDayKey(now);
+  const lastDay = streak.lastMessageDate
+    ? getDayKey(streak.lastMessageDate)
+    : null;
+
+  if (lastDay === today) {
+    return streak;
+  }
+
+  if (
+    streak.lastMessageDate &&
+    getPreviousDayKey(now) === lastDay
+  ) {
+    streak.currentStreak += 1;
+  } else {
+    streak.currentStreak = 1;
+  }
+
+  streak.longestStreak = Math.max(
+    streak.longestStreak,
+    streak.currentStreak
+  );
+
+  streak.lastMessageDate = now;
+
+  await streak.save();
+
+  return streak;
+};
+
+const getFamilyMessageStreak = async (req, res) => {
+  try {
+    const familyIds = await getFamilyMemberIds(req.user.id);
+    const familyKey = getFamilyKey(familyIds);
+
+    const streak = await FamilyMessageStreak.findOne({
+      familyKey,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: streak || {
+        currentStreak: 0,
+        longestStreak: 0,
+        lastMessageDate: null,
+      },
+    });
+  } catch (error) {
+    console.error(
+      "Get family message streak error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to load family message streak",
+    });
+  }
 };
 
 const getFamilyMembers = async (req, res) => {
@@ -107,7 +208,8 @@ const sendFamilyMessage = async (req, res) => {
       if (invalidRecipient) {
         return res.status(403).json({
           success: false,
-          message: "One or more recipients are not family members",
+          message:
+            "One or more recipients are not family members",
         });
       }
 
@@ -121,22 +223,49 @@ const sendFamilyMessage = async (req, res) => {
       });
     }
 
+    /*
+     * ONE ACTIVE FAMILY MESSAGE PER SENDER.
+     *
+     * A new message replaces the sender's previous
+     * family message completely.
+     *
+     * This keeps the Family Dashboard focused on the
+     * current message instead of becoming a chat history.
+     */
+    await FamilyMessage.deleteMany({
+      sender: req.user.id,
+    });
+
     const created = await FamilyMessage.create({
       sender: req.user.id,
       recipients,
       message: message.trim(),
     });
 
-    const populated = await FamilyMessage.findById(created._id)
+    /*
+     * Streak is updated ONLY by family messages.
+     * Snaps never touch this value.
+     */
+    const streak = await updateFamilyMessageStreak(
+      familyIds
+    );
+
+    const populated = await FamilyMessage.findById(
+      created._id
+    )
       .populate("sender", "fullName role")
       .populate("recipients", "fullName role");
 
     return res.status(201).json({
       success: true,
       data: populated,
+      streak,
     });
   } catch (error) {
-    console.error("Send family message error:", error);
+    console.error(
+      "Send family message error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -145,9 +274,38 @@ const sendFamilyMessage = async (req, res) => {
   }
 };
 
+const getUserIdForFamilyMessage = (user) => {
+  if (!user) {
+    return "";
+  }
+
+  return (
+    user._id?.toString?.() ||
+    user.id?.toString?.() ||
+    ""
+  );
+};
+
 const getFamilyMessages = async (req, res) => {
   try {
     const familyIds = await getFamilyMemberIds(req.user.id);
+
+    /*
+     * Get all messages that belong to the current family
+     * conversation.
+     *
+     * We intentionally fetch multiple messages here and then
+     * keep only the latest message from EACH sender.
+     *
+     * This means:
+     *
+     * Mom -> latest Mom message
+     * Dad -> latest Dad message
+     * Son -> latest Son message
+     *
+     * A new message from Son replaces ONLY Son's previous
+     * family message. It never replaces Mom's or Dad's message.
+     */
 
     const messages = await FamilyMessage.find({
       $or: [
@@ -170,11 +328,40 @@ const getFamilyMessages = async (req, res) => {
       .populate("sender", "fullName role")
       .populate("recipients", "fullName role")
       .sort({ createdAt: -1 })
-      .limit(30);
+      .limit(100);
+
+    /*
+     * Keep only the newest message from each sender.
+     *
+     * Because the query is sorted newest -> oldest,
+     * the first message we encounter for a sender is
+     * automatically that sender's latest message.
+     */
+    const latestBySender = new Map();
+
+    for (const message of messages) {
+      const senderId = getUserIdForFamilyMessage(
+        message.sender
+      );
+
+      if (!senderId) {
+        continue;
+      }
+
+      if (!latestBySender.has(senderId)) {
+        latestBySender.set(senderId, message);
+      }
+    }
+
+    const latestMessages = [...latestBySender.values()].sort(
+      (a, b) =>
+        new Date(b.createdAt) -
+        new Date(a.createdAt)
+    );
 
     return res.status(200).json({
       success: true,
-      data: messages,
+      data: latestMessages,
     });
   } catch (error) {
     console.error("Get family messages error:", error);
@@ -385,6 +572,7 @@ const deleteFamilySnap = async (req, res) => {
 module.exports = {
   getFamilyMembers,
   sendFamilyMessage,
+  getFamilyMessageStreak,
   getFamilyMessages,
   createFamilySnap,
   getFamilySnaps,

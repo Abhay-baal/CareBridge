@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import {
   getFamilyMembers,
   getFamilyMessages,
+  getFamilyMessageStreak,
   sendFamilyMessage,
   getFamilySnaps,
   createFamilySnap,
@@ -14,15 +15,6 @@ import {
 
 const getUserId = (user) =>
   user?._id || user?.id || "";
-
-const getInitials = (name = "") =>
-  name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase() || "?";
 
 const getRoleEmoji = (role) => {
   if (role === "parent") return "👩";
@@ -41,6 +33,10 @@ const getResponseArray = (response) => {
     return data.data;
   }
 
+  if (Array.isArray(response)) {
+    return response;
+  }
+
   return [];
 };
 
@@ -49,13 +45,21 @@ export default function FamilyCommunication() {
   const [messages, setMessages] = useState([]);
   const [snaps, setSnaps] = useState([]);
 
+  const [streak, setStreak] = useState({
+    currentStreak: 0,
+    longestStreak: 0,
+    lastMessageDate: null,
+  });
+
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [uploadingSnap, setUploadingSnap] = useState(false);
 
   const [message, setMessage] = useState("");
-  const [recipientMode, setRecipientMode] = useState("everyone");
-  const [selectedRecipients, setSelectedRecipients] = useState([]);
+  const [recipientMode, setRecipientMode] =
+    useState("everyone");
+  const [selectedRecipients, setSelectedRecipients] =
+    useState([]);
 
   const [snapCaption, setSnapCaption] = useState("");
   const [snapRecipients, setSnapRecipients] =
@@ -70,15 +74,58 @@ export default function FamilyCommunication() {
         ""
       : "";
 
-  const otherMembers = useMemo(
-    () =>
-      members.filter(
-        (member) =>
-          getUserId(member).toString() !==
-          currentUserId.toString()
-      ),
-    [members, currentUserId]
-  );
+  const otherMembers = useMemo(() => {
+    const familyMembers = Array.isArray(members)
+      ? members
+      : [];
+
+    return familyMembers.filter(
+      (member) =>
+        getUserId(member).toString() !==
+        currentUserId.toString()
+    );
+  }, [members, currentUserId]);
+
+  const loadMessages = async () => {
+    try {
+      const response = await getFamilyMessages();
+
+      setMessages(getResponseArray(response));
+    } catch {
+      // Keep the dashboard usable if polling temporarily fails.
+    }
+  };
+
+  const loadSnaps = async () => {
+    try {
+      const response = await getFamilySnaps();
+
+      setSnaps(getResponseArray(response));
+    } catch {
+      // Keep existing snaps visible.
+    }
+  };
+
+  const loadStreak = async () => {
+    try {
+      const response = await getFamilyMessageStreak();
+
+      const data = response?.data?.data;
+
+      if (data) {
+        setStreak({
+          currentStreak: Number(data.currentStreak || 0),
+          longestStreak: Number(data.longestStreak || 0),
+          lastMessageDate: data.lastMessageDate || null,
+        });
+      }
+    } catch (error) {
+      console.error(
+        "Family message streak load error:",
+        error
+      );
+    }
+  };
 
   const loadFamily = async () => {
     try {
@@ -88,15 +135,32 @@ export default function FamilyCommunication() {
         membersResponse,
         messagesResponse,
         snapsResponse,
+        streakResponse,
       ] = await Promise.all([
         getFamilyMembers(),
         getFamilyMessages(),
         getFamilySnaps(),
+        getFamilyMessageStreak(),
       ]);
 
       setMembers(getResponseArray(membersResponse));
       setMessages(getResponseArray(messagesResponse));
       setSnaps(getResponseArray(snapsResponse));
+
+      const streakData = streakResponse?.data?.data;
+
+      if (streakData) {
+        setStreak({
+          currentStreak: Number(
+            streakData.currentStreak || 0
+          ),
+          longestStreak: Number(
+            streakData.longestStreak || 0
+          ),
+          lastMessageDate:
+            streakData.lastMessageDate || null,
+        });
+      }
     } catch (error) {
       console.error(
         "Family communication load error:",
@@ -116,17 +180,9 @@ export default function FamilyCommunication() {
     loadFamily();
 
     const interval = setInterval(() => {
-      getFamilyMessages()
-        .then((response) => {
-          setMessages(getResponseArray(response));
-        })
-        .catch(() => {});
-
-      getFamilySnaps()
-        .then((response) => {
-          setSnaps(getResponseArray(response));
-        })
-        .catch(() => {});
+      loadMessages();
+      loadSnaps();
+      loadStreak();
     }, 10000);
 
     return () => clearInterval(interval);
@@ -158,22 +214,38 @@ export default function FamilyCommunication() {
         recipientMode === "specific" &&
         recipients.length === 0
       ) {
-        toast.error("Select at least one family member");
+        toast.error(
+          "Select at least one family member"
+        );
         return;
       }
 
-      await sendFamilyMessage(
+      const response = await sendFamilyMessage(
         message.trim(),
         recipients
       );
 
       setMessage("");
       setSelectedRecipients([]);
+      setRecipientMode("everyone");
+
+      if (response?.data?.streak) {
+        setStreak({
+          currentStreak: Number(
+            response.data.streak.currentStreak || 0
+          ),
+          longestStreak: Number(
+            response.data.streak.longestStreak || 0
+          ),
+          lastMessageDate:
+            response.data.streak.lastMessageDate ||
+            null,
+        });
+      }
+
+      await loadMessages();
 
       toast.success("Family message sent ❤️");
-
-      const response = await getFamilyMessages();
-      setMessages(getResponseArray(response));
     } catch (error) {
       console.error(
         "Send family message error:",
@@ -202,7 +274,9 @@ export default function FamilyCommunication() {
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("Snap must be smaller than 5MB");
+      toast.error(
+        "Snap must be smaller than 5MB"
+      );
       return;
     }
 
@@ -240,10 +314,11 @@ export default function FamilyCommunication() {
         fileInputRef.current.value = "";
       }
 
-      toast.success("Family Snap shared 📸");
+      toast.success(
+        "Family Snap shared 📸"
+      );
 
-      const response = await getFamilySnaps();
-      setSnaps(getResponseArray(response));
+      await loadSnaps();
     } catch (error) {
       console.error(
         "Family snap upload error:",
@@ -274,7 +349,9 @@ export default function FamilyCommunication() {
   const latestSnapBySender = [
     ...new Map(
       visibleSnaps.map((snap) => [
-        getUserId(snap.sender).toString(),
+        getUserId(
+          snap.sender
+        ).toString(),
         snap,
       ])
     ).values(),
@@ -282,13 +359,40 @@ export default function FamilyCommunication() {
 
   const latestMySnap = mySnaps[0];
 
+  /*
+   * Only ONE family message is displayed.
+   *
+   * The backend also keeps only one active message
+   * per sender, so this is intentionally not a feed.
+   */
+  const latestMessage = messages[0] || null;
+
+  const latestMessageSender =
+    latestMessage?.sender;
+
+  const latestMessageSenderId =
+    getUserId(latestMessageSender);
+
+  const latestMessageIsMine =
+    latestMessageSenderId.toString() ===
+    currentUserId.toString();
+
   if (loading) {
     return (
-      <section className="mt-6 rounded-2xl border bg-white p-5 shadow-sm">
-        <div className="animate-pulse space-y-4">
-          <div className="h-5 w-48 rounded bg-gray-200" />
-          <div className="h-24 rounded-xl bg-gray-100" />
-          <div className="h-20 rounded-xl bg-gray-100" />
+      <section className="mt-6 space-y-5">
+        <div className="rounded-3xl border bg-white p-6 shadow-sm">
+          <div className="animate-pulse space-y-4">
+            <div className="mx-auto h-8 w-40 rounded-full bg-gray-200" />
+            <div className="mx-auto h-16 w-24 rounded-2xl bg-gray-200" />
+            <div className="mx-auto h-4 w-56 rounded bg-gray-100" />
+          </div>
+        </div>
+
+        <div className="rounded-2xl border bg-white p-5 shadow-sm">
+          <div className="animate-pulse space-y-3">
+            <div className="h-5 w-40 rounded bg-gray-200" />
+            <div className="h-24 rounded-xl bg-gray-100" />
+          </div>
         </div>
       </section>
     );
@@ -297,30 +401,84 @@ export default function FamilyCommunication() {
   return (
     <section className="mt-6 space-y-5">
 
-      {/* RECENT FAMILY MESSAGES */}
-      <div className="rounded-2xl border bg-white p-5 shadow-sm">
+      {/* =====================================================
+          FAMILY MESSAGE STREAK
+      ====================================================== */}
+      <div className="relative overflow-hidden rounded-3xl border bg-white p-6 text-center shadow-sm">
+
+        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-100 blur-2xl" />
+
+        <div className="relative">
+          <div className="text-sm font-bold uppercase tracking-[0.18em] text-gray-500">
+            🔥 Family Message Streak
+          </div>
+
+          <div className="mt-3 flex items-center justify-center gap-3">
+            <span className="text-5xl">🔥</span>
+
+            <span className="text-6xl font-black leading-none text-gray-900">
+              {streak.currentStreak}
+            </span>
+
+            <span className="text-left text-sm font-bold uppercase leading-tight text-gray-500">
+              {streak.currentStreak === 1
+                ? "Day"
+                : "Days"}
+              <br />
+              Together
+            </span>
+          </div>
+
+          <p className="mx-auto mt-4 max-w-xs text-sm font-medium text-gray-600">
+            Keep the family message streak alive
+            every day ❤️
+          </p>
+
+          <div className="mt-5 flex items-center justify-center gap-6 text-xs">
+            <div>
+              <p className="font-bold text-gray-900">
+                {streak.currentStreak}
+              </p>
+              <p className="text-gray-500">
+                Current
+              </p>
+            </div>
+
+            <div className="h-8 w-px bg-gray-200" />
+
+            <div>
+              <p className="font-bold text-gray-900">
+                {streak.longestStreak}
+              </p>
+              <p className="text-gray-500">
+                Best
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* =====================================================
+          CURRENT FAMILY MESSAGE
+      ====================================================== */}
+      <div className="rounded-3xl border bg-white p-6 shadow-sm">
 
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900">
-            💌 Family Message
-          </h2>
+          <div>
+            <h2 className="text-xl font-black text-gray-900">
+              💌 Family Message
+            </h2>
 
-          <span className="text-xs text-gray-400">
-            Latest 30
-          </span>
-        </div>
-
-        {messages.length === 0 ? (
-          <div className="mt-4 rounded-xl bg-gray-50 p-5 text-center">
-            <div className="text-2xl">💬</div>
-
-            <p className="mt-2 text-sm text-gray-500">
-              No family messages yet.
+            <p className="mt-1 text-sm text-gray-600">
+              One message at a time. Send a new one
+              to replace the previous one.
             </p>
           </div>
-        ) : (
-          <div className="mt-4 space-y-3">
-            {messages.slice(0, 10).map((item) => {
+        </div>
+
+        {messages.length > 0 ? (
+          <div className="mt-5 space-y-3">
+            {messages.map((item) => {
               const sender = item.sender;
               const senderId = getUserId(sender);
 
@@ -331,174 +489,215 @@ export default function FamilyCommunication() {
               return (
                 <div
                   key={item._id}
-                  className={`rounded-xl p-3 ${
-                    isMine
-                      ? "bg-blue-50"
-                      : "bg-gray-50"
-                  }`}
+                  className="rounded-2xl border border-gray-200 bg-gray-50 p-5"
                 >
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-xl shadow-sm">
                       {getRoleEmoji(sender?.role)}
                     </div>
 
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">
+                      <p className="text-base font-bold text-gray-900">
                         {isMine
                           ? "You"
                           : sender?.fullName ||
                             "Family Member"}
                       </p>
 
-                      <p className="text-[10px] text-gray-400">
-                        {new Date(
-                          item.createdAt
-                        ).toLocaleString()}
+                      <p className="mt-0.5 text-xs font-medium text-gray-500">
+                        {item.createdAt
+                          ? new Date(
+                              item.createdAt
+                            ).toLocaleString()
+                          : ""}
                       </p>
                     </div>
                   </div>
 
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-gray-700">
-                    {item.message}
-                  </p>
+                  <div className="mt-5 rounded-2xl bg-white p-5 shadow-sm">
+                    <p className="whitespace-pre-wrap break-words text-lg font-medium leading-7 text-gray-900">
+                      {item.message}
+                    </p>
+                  </div>
+
+                  {Array.isArray(item.recipients) &&
+                    item.recipients.length > 0 && (
+                      <p className="mt-3 text-xs font-medium text-gray-500">
+                        Sent to{" "}
+                        {item.recipients
+                          .map(
+                            (recipient) =>
+                              getUserId(recipient) ===
+                              currentUserId
+                                ? "You"
+                                : recipient.fullName
+                          )
+                          .join(", ")}
+                      </p>
+                    )}
                 </div>
               );
             })}
           </div>
-        )}
-      </div>
+        ) : (
+          <div className="mt-5 rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+            <div className="text-4xl">💌</div>
 
+            <p className="mt-3 text-base font-bold text-gray-900">
+              No family message yet
+            </p>
 
-      {/* FAMILY MESSAGE */}
-      <div className="rounded-2xl border bg-white p-5 shadow-sm">
-
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">
-              💌 Family Message
-            </h2>
-
-            <p className="mt-1 text-xs text-gray-500">
-              Share something with your family
+            <p className="mt-1 text-sm text-gray-600">
+              Send the first message and start
+              your family streak.
             </p>
           </div>
-        </div>
-
-        <textarea
-          value={message}
-          onChange={(event) =>
-            setMessage(event.target.value)
-          }
-          placeholder="Write something to your family..."
-          maxLength={2000}
-          rows={4}
-          className="mt-4 w-full resize-none rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm outline-none transition focus:border-blue-500 focus:bg-white"
-        />
-
-        <div className="mt-3">
-          <label className="text-xs font-medium text-gray-500">
-            Send to
-          </label>
-
-          <select
-            value={recipientMode}
-            onChange={(event) => {
-              setRecipientMode(event.target.value);
-
-              if (
-                event.target.value === "everyone"
-              ) {
-                setSelectedRecipients([]);
-              }
-            }}
-            className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm"
-          >
-            <option value="everyone">
-              👨‍👩‍👧 Everyone
-            </option>
-
-            <option value="specific">
-              👤 Select family members
-            </option>
-          </select>
-        </div>
-
-        {recipientMode === "specific" && (
-          <div className="mt-3 space-y-2 rounded-xl bg-gray-50 p-3">
-            {otherMembers.map((member) => {
-              const id = getUserId(member);
-
-              return (
-                <label
-                  key={id}
-                  className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-white"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedRecipients.includes(
-                      id
-                    )}
-                    onChange={() =>
-                      toggleRecipient(
-                        id,
-                        setSelectedRecipients
-                      )
-                    }
-                  />
-
-                  <span>
-                    {getRoleEmoji(member.role)}
-                  </span>
-
-                  <span className="text-sm font-medium">
-                    {member.fullName}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
         )}
 
-        <button
-          onClick={handleSendMessage}
-          disabled={
-            sending ||
-            !message.trim() ||
-            otherMembers.length === 0
-          }
-          className="mt-4 w-full rounded-xl bg-gray-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {sending ? "Sending..." : "Send 💌"}
-        </button>
+        {/* SMALL MESSAGE INPUT */}
+        <div className="mt-5">
+
+          <textarea
+            value={message}
+            onChange={(event) =>
+              setMessage(event.target.value)
+            }
+            placeholder="Write something to your family..."
+            maxLength={2000}
+            rows={2}
+            className="w-full resize-none rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-900 placeholder:text-gray-600 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-100"
+          />
+
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-[11px] font-medium text-gray-500">
+              {message.length}/2000
+            </span>
+
+            <span className="text-[11px] font-medium text-gray-500">
+              New message replaces the old one
+            </span>
+          </div>
+
+          <div className="mt-3">
+            <label className="text-xs font-bold text-gray-700">
+              Send to
+            </label>
+
+            <select
+              value={recipientMode}
+              onChange={(event) => {
+                const value =
+                  event.target.value;
+
+                setRecipientMode(value);
+
+                if (value === "everyone") {
+                  setSelectedRecipients([]);
+                }
+              }}
+              className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-900 outline-none focus:border-gray-900"
+            >
+              <option value="everyone">
+                👨‍👩‍👧 Everyone
+              </option>
+
+              <option value="specific">
+                👤 Select family members
+              </option>
+            </select>
+          </div>
+
+          {recipientMode === "specific" && (
+            <div className="mt-3 space-y-2 rounded-2xl border border-gray-200 bg-gray-50 p-3">
+              {otherMembers.length === 0 ? (
+                <p className="text-sm font-medium text-gray-600">
+                  No other family members available.
+                </p>
+              ) : (
+                otherMembers.map((member) => {
+                  const id = getUserId(member);
+
+                  return (
+                    <label
+                      key={id}
+                      className="flex cursor-pointer items-center gap-3 rounded-xl bg-white p-3 text-sm hover:bg-gray-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedRecipients.includes(
+                          id
+                        )}
+                        onChange={() =>
+                          toggleRecipient(
+                            id,
+                            setSelectedRecipients
+                          )
+                        }
+                        className="h-4 w-4"
+                      />
+
+                      <span className="text-lg">
+                        {getRoleEmoji(
+                          member.role
+                        )}
+                      </span>
+
+                      <span className="font-semibold text-gray-900">
+                        {member.fullName}
+                      </span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={handleSendMessage}
+            disabled={
+              sending ||
+              !message.trim() ||
+              otherMembers.length === 0
+            }
+            className="mt-4 w-full rounded-2xl bg-gray-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {sending
+              ? "Sending..."
+              : "Send Family Message 💌"}
+          </button>
+        </div>
       </div>
 
-      {/* FAMILY SNAPS */}
-      <div className="rounded-2xl border bg-white p-5 shadow-sm">
+      {/* =====================================================
+          FAMILY SNAPS
+      ====================================================== */}
+      <div className="rounded-3xl border bg-white p-6 shadow-sm">
 
         <div>
-          <h2 className="text-lg font-bold text-gray-900">
+          <h2 className="text-xl font-black text-gray-900">
             📸 Family Snaps
           </h2>
 
-          <p className="mt-1 text-xs text-gray-500">
-            Snaps disappear automatically after 24 hours
+          <p className="mt-1 text-sm font-medium text-gray-600">
+            Snaps disappear automatically after 24
+            hours
           </p>
         </div>
 
         {/* CREATE SNAP */}
-        <div className="mt-4 rounded-xl bg-gray-50 p-4">
+        <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-4">
 
-          <div className="flex items-center gap-2">
-            <span className="text-xl">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">
               📸
             </span>
 
             <div>
-              <p className="text-sm font-semibold">
+              <p className="text-sm font-bold text-gray-900">
                 Share a Snap
               </p>
 
-              <p className="text-xs text-gray-500">
+              <p className="text-xs font-medium text-gray-600">
                 Default: everyone
               </p>
             </div>
@@ -510,22 +709,24 @@ export default function FamilyCommunication() {
             accept="image/*"
             onChange={handleSnapUpload}
             disabled={uploadingSnap}
-            className="mt-3 block w-full text-xs"
+            className="mt-4 block w-full text-sm font-medium text-gray-900 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-900 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white"
           />
 
           <input
             value={snapCaption}
             onChange={(event) =>
-              setSnapCaption(event.target.value)
+              setSnapCaption(
+                event.target.value
+              )
             }
             placeholder="Add a caption (optional)"
             maxLength={200}
-            className="mt-3 w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none focus:border-blue-500"
+            className="mt-3 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-600 outline-none focus:border-gray-900"
           />
 
           {otherMembers.length > 0 && (
-            <div className="mt-3">
-              <p className="text-xs font-medium text-gray-500">
+            <div className="mt-4">
+              <p className="text-xs font-bold text-gray-700">
                 Snap recipients
               </p>
 
@@ -536,7 +737,7 @@ export default function FamilyCommunication() {
                   return (
                     <label
                       key={id}
-                      className="flex items-center gap-2 text-sm"
+                      className="flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm font-medium text-gray-900 hover:bg-white"
                     >
                       <input
                         type="checkbox"
@@ -549,9 +750,14 @@ export default function FamilyCommunication() {
                             setSnapRecipients
                           )
                         }
+                        className="h-4 w-4"
                       />
 
-                      {getRoleEmoji(member.role)}
+                      <span>
+                        {getRoleEmoji(
+                          member.role
+                        )}
+                      </span>
 
                       <span>
                         {member.fullName}
@@ -561,14 +767,14 @@ export default function FamilyCommunication() {
                 })}
               </div>
 
-              <p className="mt-2 text-[11px] text-gray-400">
+              <p className="mt-2 text-[11px] font-medium text-gray-500">
                 Select nobody to share with everyone.
               </p>
             </div>
           )}
 
           {uploadingSnap && (
-            <p className="mt-3 text-xs font-medium text-blue-600">
+            <p className="mt-3 text-xs font-bold text-blue-600">
               Uploading Snap...
             </p>
           )}
@@ -576,17 +782,17 @@ export default function FamilyCommunication() {
 
         {/* MY SNAP */}
         {latestMySnap && (
-          <div className="mt-5">
+          <div className="mt-6">
             <div className="mb-2 flex items-center justify-between">
               <div>
-                <p className="text-sm font-bold text-gray-900">
+                <p className="text-sm font-black text-gray-900">
                   {getRoleEmoji(
                     latestMySnap.sender?.role
                   )}{" "}
                   MY SNAP
                 </p>
 
-                <p className="text-[11px] text-gray-400">
+                <p className="text-[11px] font-medium text-gray-500">
                   Expires{" "}
                   {new Date(
                     latestMySnap.expiresAt
@@ -609,14 +815,16 @@ export default function FamilyCommunication() {
                       )
                     );
 
-                    toast.success("Snap deleted");
+                    toast.success(
+                      "Snap deleted"
+                    );
                   } catch {
                     toast.error(
                       "Unable to delete Snap"
                     );
                   }
                 }}
-                className="text-xs font-medium text-red-500"
+                className="text-xs font-bold text-red-500"
               >
                 Delete
               </button>
@@ -631,7 +839,7 @@ export default function FamilyCommunication() {
             </div>
 
             {latestMySnap.caption && (
-              <p className="mt-2 text-sm text-gray-600">
+              <p className="mt-2 text-sm font-medium text-gray-700">
                 {latestMySnap.caption}
               </p>
             )}
@@ -639,12 +847,12 @@ export default function FamilyCommunication() {
         )}
 
         {/* OTHER FAMILY SNAPS */}
-        <div className="mt-5 space-y-5">
+        <div className="mt-6 space-y-5">
           {latestSnapBySender.map((snap) => (
             <div key={snap._id}>
 
               <div className="mb-2">
-                <p className="text-sm font-bold text-gray-900">
+                <p className="text-sm font-black text-gray-900">
                   {getRoleEmoji(
                     snap.sender?.role
                   )}{" "}
@@ -653,7 +861,7 @@ export default function FamilyCommunication() {
                   SNAP
                 </p>
 
-                <p className="text-[11px] text-gray-400">
+                <p className="text-[11px] font-medium text-gray-500">
                   Expires{" "}
                   {new Date(
                     snap.expiresAt
@@ -664,13 +872,16 @@ export default function FamilyCommunication() {
               <div className="overflow-hidden rounded-2xl border bg-black">
                 <img
                   src={snap.imageData}
-                  alt={`${snap.sender?.fullName || "Family"} snap`}
+                  alt={`${
+                    snap.sender?.fullName ||
+                    "Family"
+                  } snap`}
                   className="max-h-[420px] w-full object-cover"
                 />
               </div>
 
               {snap.caption && (
-                <p className="mt-2 text-sm text-gray-600">
+                <p className="mt-2 text-sm font-medium text-gray-700">
                   {snap.caption}
                 </p>
               )}
@@ -679,14 +890,16 @@ export default function FamilyCommunication() {
 
           {latestSnapBySender.length === 0 &&
             !latestMySnap && (
-              <div className="rounded-xl bg-gray-50 p-5 text-center">
-                <div className="text-3xl">📸</div>
+              <div className="rounded-2xl bg-gray-50 p-6 text-center">
+                <div className="text-3xl">
+                  📸
+                </div>
 
-                <p className="mt-2 text-sm text-gray-500">
-                  No active family snaps.
+                <p className="mt-2 text-sm font-bold text-gray-900">
+                  No active family snaps
                 </p>
 
-                <p className="mt-1 text-xs text-gray-400">
+                <p className="mt-1 text-xs font-medium text-gray-600">
                   Share the first one!
                 </p>
               </div>

@@ -10,6 +10,7 @@ const {
 const {
   getFamilyMembers,
   sendFamilyMessage,
+  getFamilyMessageStreak,
   getFamilyMessages,
   createFamilySnap,
   getFamilySnaps,
@@ -24,6 +25,11 @@ router.use(
 router.get(
   "/members",
   getFamilyMembers
+);
+
+router.get(
+  "/message-streak",
+  getFamilyMessageStreak
 );
 
 router.get(

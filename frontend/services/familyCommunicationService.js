@@ -6,6 +6,9 @@ export const getFamilyMembers = () =>
 export const getFamilyMessages = () =>
   api.get("/family/messages");
 
+export const getFamilyMessageStreak = () =>
+  api.get("/family/message-streak");
+
 export const sendFamilyMessage = (
   message,
   recipientIds = []
