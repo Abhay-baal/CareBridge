@@ -309,6 +309,8 @@ const MessageBubble = ({
         ? "Parent"
         : "Child");
 
+  const isSnap = item.messageType === "snap";
+
   return (
     <div
       className={`flex ${
@@ -334,9 +336,43 @@ const MessageBubble = ({
           {senderName}
         </p>
 
-        <p className="break-words text-sm">
-          {item.message}
-        </p>
+        {isSnap ? (
+          item.snapData ? (
+            <div>
+              <img
+                src={item.snapData}
+                alt="Snap"
+                className="max-h-[360px] w-auto max-w-full rounded-xl object-cover"
+              />
+
+              {item.snapExpiresAt && (
+                <p
+                  className={`mt-2 text-[10px] ${
+                    mine
+                      ? "text-blue-100"
+                      : "text-gray-500"
+                  }`}
+                >
+                  Snap
+                </p>
+              )}
+            </div>
+          ) : (
+            <div
+              className={`rounded-xl px-4 py-5 text-center text-sm ${
+                mine
+                  ? "bg-blue-700 text-blue-100"
+                  : "bg-gray-200 text-gray-500"
+              }`}
+            >
+              📸 Snap expired
+            </div>
+          )
+        ) : (
+          <p className="break-words text-sm">
+            {item.message}
+          </p>
+        )}
 
         <div
           className={`mt-1 text-[10px] ${
@@ -394,6 +430,10 @@ export default function ChatPage() {
   const [previews, setPreviews] = useState({});
 
   const [message, setMessage] = useState("");
+  const [snapPreview, setSnapPreview] = useState(null);
+  const [snapExpiresHours, setSnapExpiresHours] = useState(24);
+  const [sendingSnap, setSendingSnap] = useState(false);
+
 
   const [loadingRelationships, setLoadingRelationships] =
     useState(true);
@@ -587,6 +627,81 @@ export default function ChatPage() {
     selectedRelationship,
     setShowBottomNav,
   ]);
+
+  const handleSnapSelect = (e) => {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please select an image.");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > 1000000) {
+      setError("Snap must be smaller than 1MB.");
+      e.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      setSnapPreview(reader.result);
+      setError("");
+    };
+
+    reader.onerror = () => {
+      setError("Unable to read snap.");
+    };
+
+    reader.readAsDataURL(file);
+
+    e.target.value = "";
+  };
+
+  const sendSnap = async () => {
+    if (
+      !snapPreview ||
+      !selectedRelationship?._id ||
+      sending ||
+      sendingSnap
+    ) {
+      return;
+    }
+
+    try {
+      setSendingSnap(true);
+      setError("");
+
+      const expiresAt = new Date(
+        Date.now() +
+          Number(snapExpiresHours) * 60 * 60 * 1000
+      ).toISOString();
+
+      await apiRequest("/messages", {
+        method: "POST",
+        body: JSON.stringify({
+          parentChildId:
+            selectedRelationship._id,
+          messageType: "snap",
+          snapData: snapPreview,
+          snapExpiresAt: expiresAt,
+        }),
+      });
+
+      setSnapPreview(null);
+
+      await loadMessages(
+        selectedRelationship._id
+      );
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSendingSnap(false);
+    }
+  };
 
   const sendMessage = async (e) => {
     e.preventDefault();
@@ -793,17 +908,94 @@ export default function ChatPage() {
             )}
           </div>
 
+          {snapPreview && (
+            <div className="border-t bg-gray-50 px-3 py-3">
+              <div className="mx-auto flex max-w-3xl items-center gap-3">
+                <img
+                  src={snapPreview}
+                  alt="Snap preview"
+                  className="h-20 w-20 rounded-xl object-cover"
+                />
+
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-gray-900">
+                    Snap ready
+                  </p>
+
+                  <div className="mt-2 flex items-center gap-2">
+                    <select
+                      value={snapExpiresHours}
+                      onChange={(e) =>
+                        setSnapExpiresHours(
+                          e.target.value
+                        )
+                      }
+                      className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs"
+                    >
+                      <option value="1">
+                        Expires in 1 hour
+                      </option>
+                      <option value="6">
+                        Expires in 6 hours
+                      </option>
+                      <option value="24">
+                        Expires in 24 hours
+                      </option>
+                      <option value="72">
+                        Expires in 3 days
+                      </option>
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSnapPreview(null)
+                  }
+                  className="rounded-full px-3 py-2 text-sm text-gray-500 hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={sendSnap}
+                  disabled={sendingSnap}
+                  className="rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {sendingSnap
+                    ? "..."
+                    : "Send Snap"}
+                </button>
+              </div>
+            </div>
+          )}
+
           <form
             onSubmit={sendMessage}
             className="border-t bg-white p-3"
           >
-            <div className="flex gap-2">
+            <div className="mx-auto flex max-w-3xl items-center gap-2">
+              <label
+                className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-300 bg-white text-lg transition hover:border-blue-300 hover:bg-blue-50"
+                title="Send Snap"
+              >
+                📸
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handleSnapSelect}
+                />
+              </label>
+
               <input
                 value={message}
                 onChange={(e) =>
-                  setMessage(
-                    e.target.value
-                  )
+                  setMessage(e.target.value)
                 }
                 placeholder="Type a message..."
                 disabled={sending}

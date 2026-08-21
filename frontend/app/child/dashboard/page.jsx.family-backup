@@ -12,7 +12,6 @@ import TodayTasks from "@/components/child/TodayTasks";
 import StatsGrid from "@/components/child/StatsGrid";
 import LoadingState from "@/components/ui/LoadingState";
 import ParentSelector from "@/components/child/ParentSelector";
-import FamilyCommunication from "@/components/dashboard/FamilyCommunication";
 
 import {
   getChildDashboard,
@@ -154,9 +153,6 @@ export default function ChildDashboard() {
         tasks={tasks}
         onToggle={handleToggleTask}
       />
-
-      <FamilyCommunication />
-
     </div>
   );
 }

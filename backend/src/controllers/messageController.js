@@ -13,12 +13,18 @@ const getRelationshipForUser = async (req, relationshipId) => {
 
 const sendMessage = async (req, res) => {
   try {
-    const { parentChildId, message } = req.body;
+    const {
+      parentChildId,
+      message,
+      messageType = "text",
+      snapData = null,
+      snapExpiresAt = null,
+    } = req.body;
 
-    if (!parentChildId || !message || !message.trim()) {
+    if (!parentChildId) {
       return res.status(400).json({
         success: false,
-        message: "parentChildId and message are required",
+        message: "parentChildId is required",
       });
     }
 
@@ -34,6 +40,56 @@ const sendMessage = async (req, res) => {
       });
     }
 
+    if (!["text", "snap"].includes(messageType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid message type",
+      });
+    }
+
+    if (messageType === "text") {
+      if (!message || !message.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Message cannot be empty",
+        });
+      }
+
+      if (message.trim().length > 2000) {
+        return res.status(400).json({
+          success: false,
+          message: "Message is too long",
+        });
+      }
+    }
+
+    if (messageType === "snap") {
+      if (!snapData) {
+        return res.status(400).json({
+          success: false,
+          message: "Snap image is required",
+        });
+      }
+
+      if (!snapData.startsWith("data:image/")) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid snap image",
+        });
+      }
+
+      /*
+       * Keep the snap reasonably small because this version stores
+       * the image directly in MongoDB.
+       */
+      if (snapData.length > 1500000) {
+        return res.status(400).json({
+          success: false,
+          message: "Snap is too large. Please choose a smaller image.",
+        });
+      }
+    }
+
     const receiver =
       relationship.parent.toString() === req.user.id.toString()
         ? relationship.child
@@ -43,8 +99,19 @@ const sendMessage = async (req, res) => {
       sender: req.user.id,
       receiver,
       parentChild: relationship._id,
-      message: message.trim(),
-      messageType: "text",
+      message:
+        messageType === "text"
+          ? message.trim()
+          : "📸 Snap",
+      messageType,
+      snapData:
+        messageType === "snap"
+          ? snapData
+          : null,
+      snapExpiresAt:
+        messageType === "snap" && snapExpiresAt
+          ? new Date(snapExpiresAt)
+          : null,
       read: false,
     });
 
@@ -89,9 +156,31 @@ const getMessages = async (req, res) => {
       .populate("receiver", "fullName role")
       .sort({ createdAt: 1 });
 
+    /*
+     * Do not expose expired snap images.
+     * The message itself remains so the sender still has a
+     * conversation history entry.
+     */
+    const now = new Date();
+
+    const safeMessages = messages.map((item) => {
+      const data = item.toObject();
+
+      if (
+        data.messageType === "snap" &&
+        data.snapExpiresAt &&
+        new Date(data.snapExpiresAt) <= now
+      ) {
+        data.snapData = null;
+        data.message = "📸 Snap expired";
+      }
+
+      return data;
+    });
+
     return res.status(200).json({
       success: true,
-      data: messages,
+      data: safeMessages,
     });
   } catch (error) {
     console.error("Get messages error:", error);

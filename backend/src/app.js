@@ -1,4 +1,6 @@
 const express = require("express");
+const familyRoutes = require("./routes/familyRoutes");
+
 const cors = require("cors");
 
 const parentRoutes = require("./routes/parentRoutes");
@@ -47,6 +49,7 @@ app.use("/api/emergency-events", emergencyEventRoutes);
 app.use("/api/location", locationRoutes);
 app.use("/api/health-records", healthRecordRoutes);
 app.use("/api/parent-child", parentChildRoutes);
+app.use("/api/family", familyRoutes);
 
 app.use("/api/messages", messageRoutes);
 app.use("/api/providers", providerRoutes);

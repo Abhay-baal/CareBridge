@@ -22,15 +22,25 @@ const messageSchema = new mongoose.Schema(
 
     message: {
       type: String,
-      required: true,
       trim: true,
       maxlength: 2000,
+      default: "",
     },
 
     messageType: {
       type: String,
-      enum: ["text"],
+      enum: ["text", "snap"],
       default: "text",
+    },
+
+    snapData: {
+      type: String,
+      default: null,
+    },
+
+    snapExpiresAt: {
+      type: Date,
+      default: null,
     },
 
     read: {
