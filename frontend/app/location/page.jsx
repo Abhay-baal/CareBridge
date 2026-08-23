@@ -45,6 +45,8 @@ const apiRequest = async (url, options = {}) => {
 };
 
 export default function LocationPage() {
+  return null;
+
   const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);

@@ -20,11 +20,6 @@ const navigation = [
     icon: "💬",
   },
   {
-    href: "/child/location",
-    label: "Location",
-    icon: "📍",
-  },
-  {
     href: "/child/emergency",
     label: "Emergency",
     icon: "🚨",

@@ -206,21 +206,6 @@ export default function DashboardPage() {
           </Link>
 
           <Link
-            href="/location"
-            className="rounded-xl border bg-white p-4 shadow-sm transition hover:shadow-md active:scale-[0.98]"
-          >
-            <div className="text-2xl">📍</div>
-
-            <h3 className="mt-2 font-semibold text-gray-900">
-              Parent Location
-            </h3>
-
-            <p className="mt-1 text-xs text-gray-500">
-              View current location
-            </p>
-          </Link>
-
-          <Link
             href="/emergency-contacts"
             className="rounded-xl border bg-white p-4 shadow-sm transition hover:shadow-md active:scale-[0.98]"
           >

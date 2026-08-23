@@ -21,6 +21,8 @@ const LiveMap = dynamic(
 const STALE_AFTER_MS = 2 * 60 * 1000;
 
 export default function ChildLocationPage() {
+  return null;
+
   const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

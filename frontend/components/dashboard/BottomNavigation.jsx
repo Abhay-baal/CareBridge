@@ -28,11 +28,6 @@ export default function BottomNavigation() {
       icon: "💬",
     },
     {
-      name: "Location",
-      href: "/location",
-      icon: "📍",
-    },
-    {
       name: "Emergency",
       href: "/emergency-contacts",
       icon: "🚨",
