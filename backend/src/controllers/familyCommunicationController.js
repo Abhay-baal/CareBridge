@@ -379,7 +379,34 @@ const createFamilySnap = async (req, res) => {
       imageData,
       caption,
       recipientIds,
+      location,
     } = req.body;
+
+    const snapLocation =
+      location &&
+      typeof location === "object" &&
+      location.enabled === true
+        ? {
+            enabled: true,
+            name:
+              typeof location.name === "string"
+                ? location.name.trim().slice(0, 120)
+                : "",
+          }
+        : {
+            enabled: false,
+            name: "",
+          };
+
+    if (
+      snapLocation.enabled &&
+      !snapLocation.name
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Location name is required when location is enabled",
+      });
+    }
 
     if (!imageData) {
       return res.status(400).json({
@@ -464,6 +491,7 @@ const createFamilySnap = async (req, res) => {
         recipient,
         imageData,
         caption: caption?.trim() || "",
+        location: snapLocation,
         expiresAt,
       });
 

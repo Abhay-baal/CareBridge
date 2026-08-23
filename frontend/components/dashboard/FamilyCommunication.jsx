@@ -65,6 +65,19 @@ export default function FamilyCommunication() {
   const [snapRecipients, setSnapRecipients] =
     useState([]);
 
+  // Snap preview/location state.
+  // Location is opt-in and is never tracked continuously.
+  const [snapPreview, setSnapPreview] = useState(null);
+  const [snapFile, setSnapFile] = useState(null);
+  const [snapLocationEnabled, setSnapLocationEnabled] =
+    useState(false);
+  const [snapLocationMode, setSnapLocationMode] =
+    useState("automatic");
+  const [snapLocationName, setSnapLocationName] =
+    useState("");
+  const [locatingSnap, setLocatingSnap] =
+    useState(false);
+
   const fileInputRef = useRef(null);
 
   const currentUserId =
@@ -274,15 +287,11 @@ export default function FamilyCommunication() {
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast.error(
-        "Snap must be smaller than 5MB"
-      );
+      toast.error("Snap must be smaller than 5MB");
       return;
     }
 
     try {
-      setUploadingSnap(true);
-
       const imageData = await new Promise(
         (resolve, reject) => {
           const reader = new FileReader();
@@ -296,19 +305,171 @@ export default function FamilyCommunication() {
         }
       );
 
+      setSnapFile(file);
+      setSnapPreview(imageData);
+      setSnapLocationEnabled(false);
+      setSnapLocationMode("automatic");
+      setSnapLocationName("");
+    } catch (error) {
+      console.error("Snap preview error:", error);
+      toast.error("Unable to read Snap");
+    }
+  };
+
+  const detectSnapLocation = async () => {
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.geolocation
+    ) {
+      toast.error(
+        "Location is not supported by this browser"
+      );
+      return;
+    }
+
+    setLocatingSnap(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } =
+            position.coords;
+
+          /*
+           * One-time reverse geocoding only.
+           * We do NOT start watchPosition() and do NOT
+           * store the user's coordinates.
+           */
+          const response = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${encodeURIComponent(
+              latitude
+            )}&longitude=${encodeURIComponent(
+              longitude
+            )}&localityLanguage=en`
+          );
+
+          if (!response.ok) {
+            throw new Error(
+              "Unable to determine place"
+            );
+          }
+
+          const data = await response.json();
+
+          const address =
+            data.locality ||
+            data.city ||
+            data.principalSubdivision ||
+            data.countryName ||
+            "";
+
+          const neighbourhood =
+            data.localityInfo?.administrativeArea?.find(
+              (item) =>
+                item?.description?.toLowerCase?.().includes(
+                  "neighbourhood"
+                )
+            )?.name || "";
+
+          const placeName =
+            neighbourhood && address
+              ? `${neighbourhood}, ${address}`
+              : address;
+
+          if (!placeName) {
+            throw new Error(
+              "Unable to determine place name"
+            );
+          }
+
+          setSnapLocationName(placeName);
+          setSnapLocationEnabled(true);
+
+          toast.success(
+            `Location added: ${placeName}`
+          );
+        } catch (error) {
+          console.error(
+            "Snap location lookup error:",
+            error
+          );
+
+          toast.error(
+            "Couldn't determine the place. You can enter it manually."
+          );
+
+          setSnapLocationMode("custom");
+          setSnapLocationEnabled(true);
+        } finally {
+          setLocatingSnap(false);
+        }
+      },
+      (error) => {
+        console.error(
+          "Snap geolocation error:",
+          error
+        );
+
+        setLocatingSnap(false);
+        setSnapLocationMode("custom");
+        setSnapLocationEnabled(true);
+
+        toast.error(
+          "Location permission was unavailable. You can enter a custom location."
+        );
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 30000,
+        timeout: 10000,
+      }
+    );
+  };
+
+  const sendFamilySnap = async () => {
+    if (!snapPreview) {
+      toast.error("Select a photo first");
+      return;
+    }
+
+    if (
+      snapLocationEnabled &&
+      !snapLocationName.trim()
+    ) {
+      toast.error(
+        "Add a location name or turn location off"
+      );
+      return;
+    }
+
+    try {
+      setUploadingSnap(true);
+
       const recipients =
         snapRecipients.length > 0
           ? snapRecipients
           : [];
 
       await createFamilySnap({
-        imageData,
+        imageData: snapPreview,
         caption: snapCaption.trim(),
         recipientIds: recipients,
+        location: {
+          enabled:
+            snapLocationEnabled === true,
+          name: snapLocationEnabled
+            ? snapLocationName.trim()
+            : "",
+        },
       });
 
       setSnapCaption("");
       setSnapRecipients([]);
+      setSnapPreview(null);
+      setSnapFile(null);
+      setSnapLocationEnabled(false);
+      setSnapLocationMode("automatic");
+      setSnapLocationName("");
 
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -698,7 +859,7 @@ export default function FamilyCommunication() {
               </p>
 
               <p className="text-xs font-medium text-gray-600">
-                Default: everyone
+                Add a location only if you want
               </p>
             </div>
           </div>
@@ -712,65 +873,266 @@ export default function FamilyCommunication() {
             className="mt-4 block w-full text-sm font-medium text-gray-900 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-900 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white"
           />
 
-          <input
-            value={snapCaption}
-            onChange={(event) =>
-              setSnapCaption(
-                event.target.value
-              )
-            }
-            placeholder="Add a caption (optional)"
-            maxLength={200}
-            className="mt-3 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-600 outline-none focus:border-gray-900"
-          />
+          {snapPreview && (
+            <div className="mt-4 overflow-hidden rounded-2xl border bg-black">
+              <img
+                src={snapPreview}
+                alt="Snap preview"
+                className="max-h-[360px] w-full object-cover"
+              />
+            </div>
+          )}
 
-          {otherMembers.length > 0 && (
-            <div className="mt-4">
-              <p className="text-xs font-bold text-gray-700">
-                Snap recipients
-              </p>
+          {snapPreview && (
+            <>
+              <input
+                value={snapCaption}
+                onChange={(event) =>
+                  setSnapCaption(
+                    event.target.value
+                  )
+                }
+                placeholder="Add a caption (optional)"
+                maxLength={200}
+                className="mt-3 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-600 outline-none focus:border-gray-900"
+              />
 
-              <div className="mt-2 space-y-1">
-                {otherMembers.map((member) => {
-                  const id = getUserId(member);
+              {/* LOCATION CHOICE */}
+              <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-gray-900">
+                      📍 Add location?
+                    </p>
 
-                  return (
-                    <label
-                      key={id}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm font-medium text-gray-900 hover:bg-white"
-                    >
+                    <p className="mt-1 text-[11px] font-medium text-gray-500">
+                      Your choice. The app never tracks you.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSnapLocationEnabled(
+                        (current) => {
+                          const next = !current;
+
+                          if (!next) {
+                            setSnapLocationName("");
+                          }
+
+                          return next;
+                        }
+                      );
+                    }}
+                    className={`rounded-full px-4 py-2 text-xs font-bold ${
+                      snapLocationEnabled
+                        ? "bg-gray-900 text-white"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {snapLocationEnabled
+                      ? "ON"
+                      : "OFF"}
+                  </button>
+                </div>
+
+                {snapLocationEnabled && (
+                  <div className="mt-4">
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSnapLocationMode(
+                            "automatic"
+                          );
+                          setSnapLocationName("");
+                        }}
+                        className={`rounded-xl border px-3 py-2 text-xs font-bold ${
+                          snapLocationMode ===
+                          "automatic"
+                            ? "border-gray-900 bg-gray-900 text-white"
+                            : "border-gray-200 bg-gray-50 text-gray-700"
+                        }`}
+                      >
+                        📍 Current place
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSnapLocationMode(
+                            "custom"
+                          );
+                          setSnapLocationName("");
+                        }}
+                        className={`rounded-xl border px-3 py-2 text-xs font-bold ${
+                          snapLocationMode ===
+                          "custom"
+                            ? "border-gray-900 bg-gray-900 text-white"
+                            : "border-gray-200 bg-gray-50 text-gray-700"
+                        }`}
+                      >
+                        ✏️ Custom
+                      </button>
+                    </div>
+
+                    {snapLocationMode ===
+                      "automatic" && (
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={
+                            detectSnapLocation
+                          }
+                          disabled={
+                            locatingSnap
+                          }
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-xs font-bold text-gray-800 disabled:opacity-50"
+                        >
+                          {locatingSnap
+                            ? "Finding your place..."
+                            : snapLocationName
+                              ? `📍 ${snapLocationName}`
+                              : "📍 Detect current place"}
+                        </button>
+                      </div>
+                    )}
+
+                    {snapLocationMode ===
+                      "custom" && (
                       <input
-                        type="checkbox"
-                        checked={snapRecipients.includes(
-                          id
-                        )}
-                        onChange={() =>
-                          toggleRecipient(
-                            id,
-                            setSnapRecipients
+                        value={
+                          snapLocationName
+                        }
+                        onChange={(event) =>
+                          setSnapLocationName(
+                            event.target.value
                           )
                         }
-                        className="h-4 w-4"
+                        maxLength={120}
+                        placeholder="e.g. Grandma's House ❤️"
+                        className="mt-3 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-500 outline-none focus:border-gray-900"
                       />
+                    )}
 
-                      <span>
-                        {getRoleEmoji(
-                          member.role
-                        )}
-                      </span>
+                    {snapLocationName && (
+                      <div className="mt-3 flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2">
+                        <p className="text-xs font-bold text-gray-800">
+                          📍 {snapLocationName}
+                        </p>
 
-                      <span>
-                        {member.fullName}
-                      </span>
-                    </label>
-                  );
-                })}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSnapLocationEnabled(
+                              false
+                            );
+                            setSnapLocationName(
+                              ""
+                            );
+                          }}
+                          className="text-[11px] font-bold text-red-500"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              <p className="mt-2 text-[11px] font-medium text-gray-500">
-                Select nobody to share with everyone.
-              </p>
-            </div>
+              {/* RECIPIENTS */}
+              {otherMembers.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-xs font-bold text-gray-700">
+                    Snap recipients
+                  </p>
+
+                  <div className="mt-2 space-y-1">
+                    {otherMembers.map(
+                      (member) => {
+                        const id =
+                          getUserId(member);
+
+                        return (
+                          <label
+                            key={id}
+                            className="flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm font-medium text-gray-900 hover:bg-white"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={snapRecipients.includes(
+                                id
+                              )}
+                              onChange={() =>
+                                toggleRecipient(
+                                  id,
+                                  setSnapRecipients
+                                )
+                              }
+                              className="h-4 w-4"
+                            />
+
+                            <span>
+                              {getRoleEmoji(
+                                member.role
+                              )}
+                            </span>
+
+                            <span>
+                              {member.fullName}
+                            </span>
+                          </label>
+                        );
+                      }
+                    )}
+                  </div>
+
+                  <p className="mt-2 text-[11px] font-medium text-gray-500">
+                    Select nobody to share with everyone.
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-4 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSnapPreview(null);
+                    setSnapFile(null);
+                    setSnapCaption("");
+                    setSnapRecipients([]);
+                    setSnapLocationEnabled(false);
+                    setSnapLocationMode("automatic");
+                    setSnapLocationName("");
+
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = "";
+                    }
+                  }}
+                  disabled={uploadingSnap}
+                  className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-700 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={sendFamilySnap}
+                  disabled={
+                    uploadingSnap ||
+                    locatingSnap
+                  }
+                  className="flex-1 rounded-xl bg-gray-900 px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
+                >
+                  {uploadingSnap
+                    ? "Sharing..."
+                    : "Share Snap 📸"}
+                </button>
+              </div>
+            </>
           )}
 
           {uploadingSnap && (
@@ -838,6 +1200,13 @@ export default function FamilyCommunication() {
               />
             </div>
 
+            {latestMySnap.location?.enabled &&
+              latestMySnap.location?.name && (
+                <p className="mt-2 text-xs font-bold text-gray-600">
+                  📍 {latestMySnap.location.name}
+                </p>
+              )}
+
             {latestMySnap.caption && (
               <p className="mt-2 text-sm font-medium text-gray-700">
                 {latestMySnap.caption}
@@ -879,6 +1248,13 @@ export default function FamilyCommunication() {
                   className="max-h-[420px] w-full object-cover"
                 />
               </div>
+
+              {snap.location?.enabled &&
+                snap.location?.name && (
+                  <p className="mt-2 text-xs font-bold text-gray-600">
+                    📍 {snap.location.name}
+                  </p>
+                )}
 
               {snap.caption && (
                 <p className="mt-2 text-sm font-medium text-gray-700">

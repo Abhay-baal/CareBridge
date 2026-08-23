@@ -26,6 +26,21 @@ const familySnapSchema = new mongoose.Schema(
       default: "",
     },
 
+    // Optional Snap location tag.
+    // No live tracking or exact GPS coordinates are stored.
+    location: {
+      enabled: {
+        type: Boolean,
+        default: false,
+      },
+      name: {
+        type: String,
+        trim: true,
+        maxlength: 120,
+        default: "",
+      },
+    },
+
     expiresAt: {
       type: Date,
       required: true,

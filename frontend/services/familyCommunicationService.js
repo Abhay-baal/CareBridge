@@ -25,11 +25,16 @@ export const createFamilySnap = ({
   imageData,
   caption,
   recipientIds = [],
+  location = {
+    enabled: false,
+    name: "",
+  },
 }) =>
   api.post("/family/snaps", {
     imageData,
     caption,
     recipientIds,
+    location,
   });
 
 export const deleteFamilySnap = (id) =>
