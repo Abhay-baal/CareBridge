@@ -68,7 +68,7 @@ export default function FamilyCommunication() {
   // Snap preview/location state.
   // Location is opt-in and is never tracked continuously.
   const [snapPreview, setSnapPreview] = useState(null);
-  const [, setSnapFile] = useState(null);
+  const [snapFile, setSnapFile] = useState(null);
   const [snapLocationEnabled, setSnapLocationEnabled] =
     useState(false);
   const [snapLocationMode, setSnapLocationMode] =
@@ -540,8 +540,8 @@ export default function FamilyCommunication() {
 
   if (loading) {
     return (
-      <section className="mt-4 space-y-3">
-        <div className="rounded-2xl border bg-white p-4 shadow-sm">
+      <section className="mt-6 space-y-5">
+        <div className="rounded-3xl border bg-white p-6 shadow-sm">
           <div className="animate-pulse space-y-4">
             <div className="mx-auto h-8 w-40 rounded-full bg-gray-200" />
             <div className="mx-auto h-16 w-24 rounded-2xl bg-gray-200" />
@@ -560,7 +560,7 @@ export default function FamilyCommunication() {
   }
 
   return (
-    <section className="mt-4 space-y-3">
+    <section className="mt-6 space-y-5">
 
       {/* =====================================================
           FAMILY MESSAGE STREAK
@@ -570,24 +570,18 @@ export default function FamilyCommunication() {
         <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-100 blur-2xl" />
 
         <div className="relative">
-          <div className="flex items-center justify-between">
-            <div className="text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
-              🔥 Family Streak
-            </div>
-
-            <div className="text-[11px] font-semibold text-gray-400">
-              Keep it alive ❤️
-            </div>
+          <div className="text-sm font-bold uppercase tracking-[0.18em] text-gray-500">
+            🔥 Family Message Streak
           </div>
 
           <div className="mt-3 flex items-center justify-center gap-3">
-            <span className="text-3xl">🔥</span>
+            <span className="text-5xl">🔥</span>
 
             <span className="text-6xl font-black leading-none text-gray-900">
               {streak.currentStreak}
             </span>
 
-            <span className="text-left text-[10px] font-bold uppercase leading-tight text-gray-500">
+            <span className="text-left text-sm font-bold uppercase leading-tight text-gray-500">
               {streak.currentStreak === 1
                 ? "Day"
                 : "Days"}
@@ -596,11 +590,12 @@ export default function FamilyCommunication() {
             </span>
           </div>
 
-          <p className="mt-2 text-xs font-medium text-gray-500">
-            Every family message keeps the connection alive.
+          <p className="mx-auto mt-4 max-w-xs text-sm font-medium text-gray-600">
+            Keep the family message streak alive
+            every day ❤️
           </p>
 
-          <div className="mt-3 flex items-center justify-center gap-5 text-[11px]">
+          <div className="mt-5 flex items-center justify-center gap-6 text-xs">
             <div>
               <p className="font-bold text-gray-900">
                 {streak.currentStreak}
@@ -610,7 +605,7 @@ export default function FamilyCommunication() {
               </p>
             </div>
 
-            <div className="h-5 w-px bg-gray-200" />
+            <div className="h-8 w-px bg-gray-200" />
 
             <div>
               <p className="font-bold text-gray-900">
@@ -627,22 +622,23 @@ export default function FamilyCommunication() {
       {/* =====================================================
           CURRENT FAMILY MESSAGE
       ====================================================== */}
-      <div className="rounded-2xl border bg-white p-4 shadow-sm">
+      <div className="rounded-3xl border bg-white p-6 shadow-sm">
 
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-black text-gray-900">
+            <h2 className="text-xl font-black text-gray-900">
               💌 Family Message
             </h2>
 
-            <p className="mt-0.5 text-xs text-gray-500">
-              Share something with your family.
+            <p className="mt-1 text-sm text-gray-600">
+              One message at a time. Send a new one
+              to replace the previous one.
             </p>
           </div>
         </div>
 
         {messages.length > 0 ? (
-          <div className="mt-3 space-y-2">
+          <div className="mt-5 space-y-3">
             {messages.map((item) => {
               const sender = item.sender;
               const senderId = getUserId(sender);
@@ -654,7 +650,7 @@ export default function FamilyCommunication() {
               return (
                 <div
                   key={item._id}
-                  className="rounded-xl border border-gray-200 bg-gray-50 p-3"
+                  className="rounded-2xl border border-gray-200 bg-gray-50 p-5"
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-xl shadow-sm">
@@ -679,8 +675,8 @@ export default function FamilyCommunication() {
                     </div>
                   </div>
 
-                  <div className="mt-3 rounded-xl bg-white p-3 shadow-sm">
-                    <p className="whitespace-pre-wrap break-words text-sm font-medium leading-5 text-gray-900">
+                  <div className="mt-5 rounded-2xl bg-white p-5 shadow-sm">
+                    <p className="whitespace-pre-wrap break-words text-lg font-medium leading-7 text-gray-900">
                       {item.message}
                     </p>
                   </div>
@@ -720,7 +716,7 @@ export default function FamilyCommunication() {
         )}
 
         {/* SMALL MESSAGE INPUT */}
-        <div className="mt-3">
+        <div className="mt-5">
 
           <textarea
             value={message}
@@ -730,7 +726,7 @@ export default function FamilyCommunication() {
             placeholder="Write something to your family..."
             maxLength={2000}
             rows={2}
-            className="w-full resize-none rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-900 placeholder:text-gray-600 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-100"
+            className="w-full resize-none rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-900 placeholder:text-gray-600 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-100"
           />
 
           <div className="mt-2 flex items-center justify-between">
@@ -836,20 +832,21 @@ export default function FamilyCommunication() {
       {/* =====================================================
           FAMILY SNAPS
       ====================================================== */}
-      <div className="rounded-2xl border bg-white p-4 shadow-sm">
+      <div className="rounded-3xl border bg-white p-6 shadow-sm">
 
         <div>
           <h2 className="text-xl font-black text-gray-900">
             📸 Family Snaps
           </h2>
 
-          <p className="mt-0.5 text-xs font-medium text-gray-500">
-            Photos disappear after 24 hours.
+          <p className="mt-1 text-sm font-medium text-gray-600">
+            Snaps disappear automatically after 24
+            hours
           </p>
         </div>
 
         {/* CREATE SNAP */}
-        <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
+        <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-4">
 
           <div className="flex items-center gap-3">
             <span className="text-2xl">
@@ -881,7 +878,7 @@ export default function FamilyCommunication() {
               <img
                 src={snapPreview}
                 alt="Snap preview"
-                className="aspect-[4/5] w-full object-cover"
+                className="max-h-[360px] w-full object-cover"
               />
             </div>
           )}
@@ -897,7 +894,7 @@ export default function FamilyCommunication() {
                 }
                 placeholder="Add a caption (optional)"
                 maxLength={200}
-                className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-600 outline-none focus:border-gray-900"
+                className="mt-3 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-600 outline-none focus:border-gray-900"
               />
 
               {/* LOCATION CHOICE */}
@@ -1016,7 +1013,7 @@ export default function FamilyCommunication() {
                         }
                         maxLength={120}
                         placeholder="e.g. Grandma's House ❤️"
-                        className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-500 outline-none focus:border-gray-900"
+                        className="mt-3 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-500 outline-none focus:border-gray-900"
                       />
                     )}
 
@@ -1145,21 +1142,19 @@ export default function FamilyCommunication() {
           )}
         </div>
 
-        {/* =====================================================
-            MY SNAP
-        ====================================================== */}
+        {/* MY SNAP */}
         {latestMySnap && (
           <div className="mt-6">
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-2 flex items-center justify-between">
               <div>
-                <p className="text-base font-black text-gray-900">
+                <p className="text-sm font-black text-gray-900">
                   {getRoleEmoji(
                     latestMySnap.sender?.role
                   )}{" "}
                   MY SNAP
                 </p>
 
-                <p className="mt-0.5 text-[11px] font-medium text-gray-400">
+                <p className="text-[11px] font-medium text-gray-500">
                   Expires{" "}
                   {new Date(
                     latestMySnap.expiresAt
@@ -1168,7 +1163,6 @@ export default function FamilyCommunication() {
               </div>
 
               <button
-                type="button"
                 onClick={async () => {
                   try {
                     await deleteFamilySnap(
@@ -1183,7 +1177,9 @@ export default function FamilyCommunication() {
                       )
                     );
 
-                    toast.success("Snap deleted");
+                    toast.success(
+                      "Snap deleted"
+                    );
                   } catch {
                     toast.error(
                       "Unable to delete Snap"
@@ -1196,11 +1192,11 @@ export default function FamilyCommunication() {
               </button>
             </div>
 
-            <div className="overflow-hidden rounded-3xl border border-gray-200 bg-black shadow-sm">
+            <div className="overflow-hidden rounded-2xl border bg-black">
               <img
                 src={latestMySnap.imageData}
                 alt="My family snap"
-                className="aspect-[4/5] w-full object-cover"
+                className="max-h-[420px] w-full object-cover"
               />
             </div>
 
@@ -1219,14 +1215,13 @@ export default function FamilyCommunication() {
           </div>
         )}
 
-        {/* =====================================================
-            OTHER FAMILY SNAPS
-        ====================================================== */}
-        <div className="mt-7 space-y-7">
+        {/* OTHER FAMILY SNAPS */}
+        <div className="mt-6 space-y-5">
           {latestSnapBySender.map((snap) => (
             <div key={snap._id}>
-              <div className="mb-3">
-                <p className="text-base font-black text-gray-900">
+
+              <div className="mb-2">
+                <p className="text-sm font-black text-gray-900">
                   {getRoleEmoji(
                     snap.sender?.role
                   )}{" "}
@@ -1235,7 +1230,7 @@ export default function FamilyCommunication() {
                   SNAP
                 </p>
 
-                <p className="mt-0.5 text-[11px] font-medium text-gray-400">
+                <p className="text-[11px] font-medium text-gray-500">
                   Expires{" "}
                   {new Date(
                     snap.expiresAt
@@ -1243,14 +1238,14 @@ export default function FamilyCommunication() {
                 </p>
               </div>
 
-              <div className="overflow-hidden rounded-3xl border border-gray-200 bg-black shadow-sm">
+              <div className="overflow-hidden rounded-2xl border bg-black">
                 <img
                   src={snap.imageData}
                   alt={`${
                     snap.sender?.fullName ||
                     "Family"
                   } snap`}
-                  className="aspect-[4/5] w-full object-cover"
+                  className="max-h-[420px] w-full object-cover"
                 />
               </div>
 
