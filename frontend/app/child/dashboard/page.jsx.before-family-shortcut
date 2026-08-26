@@ -122,7 +122,6 @@ export default function ChildDashboard() {
     <div className="mx-auto max-w-md space-y-4 p-4">
       <WelcomeHeader
         parentName={parent?.user?.fullName}
-        showFamilyShortcut
       />
 
       <FamilyCommunication />
