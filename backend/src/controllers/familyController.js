@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const Family = require("../models/Family");
 const User = require("../models/User");
+const ParentChild = require("../models/ParentChild");
 
 const generateFamilyCode = () => {
   return crypto
@@ -18,6 +19,69 @@ const getUserFamily = async (userId) => {
       { children: userId },
     ],
   });
+};
+
+
+/*
+ * Synchronize the Family membership with the existing
+ * ParentChild relationship system.
+ *
+ * Family is the source of truth for membership.
+ * ParentChild is automatically maintained for every
+ * parent -> child combination inside that family.
+ */
+const syncFamilyRelationships = async (family) => {
+  const parentIds = [
+    family.father,
+    family.mother,
+  ].filter(Boolean).map((id) => id.toString());
+
+  const childIds = (family.children || [])
+    .filter(Boolean)
+    .map((id) => id.toString());
+
+  for (const parentId of parentIds) {
+    for (const childId of childIds) {
+      await ParentChild.updateOne(
+        {
+          parent: parentId,
+          child: childId,
+        },
+        {
+          $setOnInsert: {
+            parent: parentId,
+            child: childId,
+            active: false,
+          },
+        },
+        {
+          upsert: true,
+        }
+      );
+    }
+  }
+
+  /*
+   * Make sure every child has exactly one active parent.
+   * Existing active relationships are preserved.
+   * If a child has no active parent, the oldest relationship
+   * becomes active.
+   */
+  for (const childId of childIds) {
+    const relationships = await ParentChild.find({
+      child: childId,
+    }).sort({
+      createdAt: 1,
+    });
+
+    if (
+      relationships.length > 0 &&
+      !relationships.some((relationship) => relationship.active)
+    ) {
+      relationships[0].active = true;
+      await relationships[0].save();
+    }
+  }
 };
 
 const formatFamily = async (family) => {
@@ -60,6 +124,10 @@ const getMyFamily = async (req, res) => {
         data: null,
       });
     }
+
+    // Keep the legacy ParentChild graph synchronized
+    // with the actual Family membership.
+    await syncFamilyRelationships(family);
 
     return res.status(200).json({
       success: true,
@@ -141,6 +209,8 @@ const createFamily = async (req, res) => {
 
     const family = await Family.create(familyData);
 
+    await syncFamilyRelationships(family);
+
     return res.status(201).json({
       success: true,
       message: "Family created successfully",
@@ -211,6 +281,10 @@ const joinFamily = async (req, res) => {
 
       await family.save();
 
+      // A child joining a family must automatically connect
+      // with every parent already inside that family.
+      await syncFamilyRelationships(family);
+
       return res.status(200).json({
         success: true,
         message: "You joined the family successfully",
@@ -240,6 +314,10 @@ const joinFamily = async (req, res) => {
 
       await family.save();
 
+      // A parent joining a family must automatically connect
+      // with every child already inside that family.
+      await syncFamilyRelationships(family);
+
       return res.status(200).json({
         success: true,
         message: "You joined the family successfully",
@@ -265,4 +343,5 @@ module.exports = {
   getMyFamily,
   createFamily,
   joinFamily,
+  syncFamilyRelationships,
 };
