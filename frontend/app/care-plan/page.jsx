@@ -1,7 +1,8 @@
 "use client";
 
 import AppLayout from "@/components/layout/AppLayout";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import toast from "react-hot-toast";
 
 import {
@@ -13,6 +14,11 @@ import {
 import {
   getParentChildRelationships,
 } from "@/services/parentChildService";
+import {
+  createChildCarePlan,
+  getChildDashboard,
+  updateChildCarePlan,
+} from "@/services/childService";
 
 const WALK_LEVELS = [
   {
@@ -114,7 +120,12 @@ function Icon({ children, className = "" }) {
 }
 
 export default function CarePlanPage() {
-  const [profile, setProfile] = useState("parent");
+  const pathname = usePathname();
+  const isChild = pathname?.startsWith("/child");
+  const PageLayout = isChild ? Fragment : AppLayout;
+  const [profile, setProfile] = useState(
+    isChild ? "child" : "parent"
+  );
   const [screen, setScreen] = useState("home");
 
   const [givenTasks, setGivenTasks] = useState([]);
@@ -135,23 +146,27 @@ export default function CarePlanPage() {
   const [activeWalk, setActiveWalk] = useState(null);
 
   const recipients = useMemo(() => {
-    if (profile !== "parent") {
-      return [];
-    }
-
     return relationships
       .filter(
         (relationship) =>
-          relationship?.parent &&
-          relationship?.child
+          relationship?.parent && relationship?.child
       )
       .map((relationship) => ({
-        id: relationship.child._id,
+        id:
+          profile === "parent"
+            ? relationship.child._id
+            : relationship.parent._id,
         relationshipId: relationship._id,
-        name: relationship.child.fullName,
-        email: relationship.child.email,
-        emoji: "👦",
-        role: "Child",
+        name:
+          profile === "parent"
+            ? relationship.child.fullName
+            : relationship.parent.fullName,
+        email:
+          profile === "parent"
+            ? relationship.child.email
+            : relationship.parent.email,
+        emoji: profile === "parent" ? "👦" : "👨‍👩‍👧",
+        role: profile === "parent" ? "Child" : "Parent",
       }));
   }, [relationships, profile]);
 
@@ -186,9 +201,13 @@ export default function CarePlanPage() {
 
   const loadRealCarePlans = async () => {
     try {
-      const response = await getCarePlans();
+      const response = isChild
+        ? await getChildDashboard()
+        : await getCarePlans();
 
-      const realPlans = response?.data || [];
+      const realPlans = isChild
+        ? response?.data?.carePlans || []
+        : response?.data || [];
 
       const normalizedPlans = realPlans.map(normalizeCarePlan);
 
@@ -211,19 +230,35 @@ export default function CarePlanPage() {
   };
 
   useEffect(() => {
-    if (profile !== "parent") return;
-
     let cancelled = false;
 
     const load = async () => {
       try {
         setLoadingRelationships(true);
 
-        const [familyResponse, carePlanResponse] =
-          await Promise.all([
-            getParentChildRelationships(),
-            getCarePlans(),
-          ]);
+        if (isChild) {
+          const response = await getChildDashboard();
+
+          if (cancelled) return;
+
+          const parent = response?.data?.parent?.user ||
+            response?.data?.parent;
+
+          setRelationships(
+            parent
+              ? [{ _id: parent._id, parent, child: { _id: "self" } }]
+              : []
+          );
+          setGivenTasks(
+            (response?.data?.carePlans || []).map(normalizeCarePlan)
+          );
+          return;
+        }
+
+        const [familyResponse, carePlanResponse] = await Promise.all([
+          getParentChildRelationships(),
+          getCarePlans(),
+        ]);
 
         if (cancelled) return;
 
@@ -260,7 +295,7 @@ export default function CarePlanPage() {
     return () => {
       cancelled = true;
     };
-  }, [profile]);
+  }, [profile, isChild]);
 
   const currentWalkLevel = useMemo(
     () =>
@@ -332,19 +367,21 @@ export default function CarePlanPage() {
       return;
     }
 
-    if (profile !== "parent") {
+    if (!isChild && profile !== "parent") {
       toast.error("Only parents can assign care.");
       return;
     }
 
     try {
       await Promise.all(
-        selectedRecipients.map((childId) =>
-          createCarePlan({
+        selectedRecipients.map((recipientId) =>
+          (isChild ? createChildCarePlan : createCarePlan)({
             title: taskTitle.trim(),
             description: "",
             dueDate: getDueDate(taskTime),
-            childId,
+            ...(isChild
+              ? { parentId: recipientId }
+              : { childId: recipientId }),
             careType: "task",
           })
         )
@@ -374,19 +411,21 @@ export default function CarePlanPage() {
       return;
     }
 
-    if (profile !== "parent") {
+    if (!isChild && profile !== "parent") {
       toast.error("Only parents can assign care.");
       return;
     }
 
     try {
       await Promise.all(
-        selectedRecipients.map((childId) =>
-          createCarePlan({
+        selectedRecipients.map((recipientId) =>
+          (isChild ? createChildCarePlan : createCarePlan)({
             title: `Walk for ${currentWalkLevel.display}`,
             description: `Care activity: ${currentWalkLevel.label} walk`,
             dueDate: getDueDate(taskTime),
-            childId,
+            ...(isChild
+              ? { parentId: recipientId }
+              : { childId: recipientId }),
             careType: "walk",
             walkLevel: currentWalkLevel.id,
             walkDuration: currentWalkLevel.duration,
@@ -415,7 +454,11 @@ export default function CarePlanPage() {
 
   const completeTask = async (id) => {
     try {
-      await updateCarePlan(id, { status: "completed" });
+      if (isChild) {
+        await updateChildCarePlan(id, "completed");
+      } else {
+        await updateCarePlan(id, { status: "completed" });
+      }
       await loadRealCarePlans();
       toast.success("Care task completed");
     } catch (error) {
@@ -479,7 +522,7 @@ export default function CarePlanPage() {
 
   if (screen === "give") {
     return (
-      <AppLayout>
+      <PageLayout>
         <div className="mx-auto w-full max-w-2xl">
           <PageBackButton
             onClick={goHome}
@@ -512,13 +555,13 @@ export default function CarePlanPage() {
             />
           </div>
         </div>
-      </AppLayout>
+      </PageLayout>
     );
   }
 
   if (screen === "task") {
     return (
-      <AppLayout>
+      <PageLayout>
         <div className="mx-auto w-full max-w-2xl">
           <PageBackButton
             onClick={goHome}
@@ -605,13 +648,13 @@ export default function CarePlanPage() {
             Assign Care
           </button>
         </div>
-      </AppLayout>
+      </PageLayout>
     );
   }
 
   if (screen === "walk") {
     return (
-      <AppLayout>
+      <PageLayout>
         <div className="mx-auto w-full max-w-2xl">
           <PageBackButton
             onClick={goHome}
@@ -686,13 +729,13 @@ export default function CarePlanPage() {
             Assign Walk
           </button>
         </div>
-      </AppLayout>
+      </PageLayout>
     );
   }
 
   if (screen === "timer") {
     return (
-      <AppLayout>
+      <PageLayout>
         <div className="mx-auto w-full max-w-2xl">
           <PageBackButton
             onClick={goHome}
@@ -758,12 +801,12 @@ export default function CarePlanPage() {
             </div>
           </div>
         </div>
-      </AppLayout>
+      </PageLayout>
     );
   }
 
   return (
-    <AppLayout>
+    <PageLayout>
       <div className="mx-auto w-full max-w-2xl">
         <div className="mb-6">
           <div className="flex items-start justify-between gap-4">
@@ -883,7 +926,7 @@ export default function CarePlanPage() {
           </div>
         </div>
       </div>
-    </AppLayout>
+    </PageLayout>
   );
 }
 
