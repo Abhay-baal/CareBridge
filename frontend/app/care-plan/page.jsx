@@ -1,7 +1,7 @@
 "use client";
 
 import AppLayout from "@/components/layout/AppLayout";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import toast from "react-hot-toast";
 
@@ -122,7 +122,7 @@ function Icon({ children, className = "" }) {
 export default function CarePlanPage() {
   const pathname = usePathname();
   const isChild = pathname?.startsWith("/child");
-  const PageLayout = isChild ? Fragment : AppLayout;
+  const PageLayout = isChild ? ChildCareLayout : AppLayout;
   const [profile, setProfile] = useState(
     isChild ? "child" : "parent"
   );
@@ -940,6 +940,14 @@ function PageBackButton({ onClick, label }) {
       <span className="text-lg">←</span>
       {label}
     </button>
+  );
+}
+
+function ChildCareLayout({ children }) {
+  return (
+    <div className="mx-auto min-h-screen w-full max-w-md px-4 pb-24 pt-5">
+      {children}
+    </div>
   );
 }
 
