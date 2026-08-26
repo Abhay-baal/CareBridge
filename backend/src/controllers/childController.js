@@ -2,6 +2,7 @@ const Parent = require("../models/Parent");
 const ParentChild = require("../models/ParentChild");
 const CarePlan = require("../models/CarePlan");
 const Appointment = require("../models/Appointment");
+const User = require("../models/User");
 
 /*
  * Get the active Parent profile for the authenticated child.
@@ -146,8 +147,69 @@ const updateChildCarePlan = async (req, res) => {
   }
 };
 
+const createChildCarePlan = async (req, res) => {
+  try {
+    const { title, description, dueDate, parentId, careType, walkLevel, walkDuration } = req.body;
+
+    if (!title || !dueDate || !parentId) {
+      return res.status(400).json({
+        success: false,
+        message: "Title, due date and parent are required",
+      });
+    }
+
+    const relationship = await ParentChild.findOne({
+      parent: parentId,
+      child: req.user.id,
+    });
+
+    if (!relationship) {
+      return res.status(403).json({
+        success: false,
+        message: "This parent is not connected to your family",
+      });
+    }
+
+    const parent = await Parent.findOne({ user: parentId });
+    const recipient = await User.findOne({ _id: parentId, role: "parent" });
+
+    if (!parent || !recipient) {
+      return res.status(404).json({
+        success: false,
+        message: "Parent not found",
+      });
+    }
+
+    const carePlan = await CarePlan.create({
+      createdBy: req.user.id,
+      parent: parent._id,
+      child: req.user.id,
+      parentChild: relationship._id,
+      title: title.trim(),
+      description: description?.trim() || "",
+      dueDate,
+      careType: careType || "task",
+      walkLevel: careType === "walk" ? walkLevel : undefined,
+      walkDuration: careType === "walk" ? walkDuration : undefined,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Care plan created successfully",
+      data: carePlan,
+    });
+  } catch (error) {
+    console.error("Create child care plan error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
 module.exports = {
   getParentForChild,
   getChildDashboard,
   updateChildCarePlan,
+  createChildCarePlan,
 };
