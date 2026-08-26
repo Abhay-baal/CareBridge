@@ -48,7 +48,6 @@ const getChildDashboard = async (req, res) => {
 
     const [carePlans, appointments] = await Promise.all([
       CarePlan.find({
-        child: req.user.id,
         parent: parent._id,
       }).sort({ dueDate: 1 }),
 
@@ -96,24 +95,10 @@ const updateChildCarePlan = async (req, res) => {
       });
     }
 
-    const relationship = await ParentChild.findOne({
-      parent: parent.user,
-      child: req.user.id,
-    });
-
-    if (!relationship) {
-      return res.status(403).json({
-        success: false,
-        message: "You are no longer connected to this parent",
-      });
-    }
-
     const carePlan = await CarePlan.findOneAndUpdate(
       {
         _id: req.params.id,
         parent: parent._id,
-        child: req.user.id,
-        parentChild: relationship._id,
       },
       {
         status: req.body.status,
