@@ -391,21 +391,22 @@ export default function ChatPage() {
     );
   }, []);
 
-  const loadChat = async () => {
+  const loadChat = async ({
+    initial = false,
+  } = {}) => {
     try {
-      setLoading(true);
+      if (initial) {
+        setLoading(true);
+      }
+
       setError("");
 
       const [
         familyResult,
         membersResult,
-        groupResult,
       ] = await Promise.all([
         apiRequest("/family/me"),
         apiRequest("/family/chat/members"),
-        apiRequest(
-          "/family/chat/group/messages"
-        ),
       ]);
 
       setFamily(
@@ -415,31 +416,36 @@ export default function ChatPage() {
       setFamilyMembers(
         membersResult.data || []
       );
-
-      setGroupMessages(
-        groupResult.data || []
-      );
     } catch (err) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      if (initial) {
+        setLoading(false);
+      }
+    }
+  };
+
+  const refreshGroupMessages = async () => {
+    try {
+      const result =
+        await apiRequest(
+          "/family/chat/group/messages"
+        );
+
+      setGroupMessages(
+        result.data || []
+      );
+    } catch (err) {
+      setError(err.message);
     }
   };
 
   useEffect(() => {
     if (!role) return;
 
-    loadChat();
-
-    const interval = setInterval(
-      () => {
-        loadChat();
-      },
-      5000
-    );
-
-    return () =>
-      clearInterval(interval);
+    loadChat({
+      initial: true,
+    });
   }, [role]);
 
   useEffect(() => {
@@ -474,11 +480,19 @@ export default function ChatPage() {
     };
 
   const loadDirectMessages =
-    async (userId) => {
+    async (
+      userId,
+      {
+        initial = false,
+      } = {}
+    ) => {
       if (!userId) return;
 
       try {
-        setLoadingMessages(true);
+        if (initial) {
+          setLoadingMessages(true);
+        }
+
         setError("");
 
         const result =
@@ -492,7 +506,9 @@ export default function ChatPage() {
       } catch (err) {
         setError(err.message);
       } finally {
-        setLoadingMessages(false);
+        if (initial) {
+          setLoadingMessages(false);
+        }
       }
     };
 
@@ -501,34 +517,56 @@ export default function ChatPage() {
       return;
     }
 
-    if (selectedPerson.type === "group") {
-      loadGroupMessages();
+    let cancelled = false;
+    let interval;
 
-      const interval =
-        setInterval(
-          loadGroupMessages,
-          5000
+    const loadSelectedConversation =
+      async () => {
+        if (cancelled) return;
+
+        if (
+          selectedPerson.type ===
+          "group"
+        ) {
+          await loadGroupMessages();
+          return;
+        }
+
+        await loadDirectMessages(
+          selectedPerson._id,
+          {
+            initial: true,
+          }
         );
+      };
 
-      return () =>
-        clearInterval(interval);
-    }
+    loadSelectedConversation();
 
-    loadDirectMessages(
-      selectedPerson._id
+    interval = setInterval(
+      async () => {
+        if (cancelled) return;
+
+        if (
+          selectedPerson.type ===
+          "group"
+        ) {
+          await loadGroupMessages();
+        } else {
+          await loadDirectMessages(
+            selectedPerson._id
+          );
+        }
+      },
+      5000
     );
 
-    const interval =
-      setInterval(
-        () =>
-          loadDirectMessages(
-            selectedPerson._id
-          ),
-        5000
-      );
+    return () => {
+      cancelled = true;
 
-    return () =>
-      clearInterval(interval);
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
   }, [
     selectedPerson?._id,
     selectedPerson?.type,
