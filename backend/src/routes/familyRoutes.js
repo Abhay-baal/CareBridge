@@ -17,10 +17,40 @@ const {
   deleteFamilySnap,
 } = require("../controllers/familyCommunicationController");
 
+const {
+  getMyFamily,
+  createFamily,
+  joinFamily,
+} = require("../controllers/familyController");
+
 router.use(
   authenticate,
   authorize("parent", "child")
 );
+
+/*
+ * NEW FAMILY FOUNDATION
+ */
+
+router.get(
+  "/me",
+  getMyFamily
+);
+
+router.post(
+  "/create",
+  createFamily
+);
+
+router.post(
+  "/join",
+  joinFamily
+);
+
+/*
+ * EXISTING FAMILY COMMUNICATION
+ * Kept intact.
+ */
 
 router.get(
   "/members",
