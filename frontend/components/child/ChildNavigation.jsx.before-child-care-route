@@ -25,7 +25,7 @@ const navigation = [
     icon: "🚨",
   },
   {
-    href: "/child/care",
+    href: "/care-plan",
     label: "Care",
     icon: "❤️",
   },
