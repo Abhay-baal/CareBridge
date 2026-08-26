@@ -13,6 +13,11 @@ export const updateChildCarePlan = async (id, status) => {
   return response.data;
 };
 
+export const createChildCarePlan = async (data) => {
+  const response = await api.post("/child/care-plans", data);
+  return response.data;
+};
+
 export const getParentLocation = async () => {
   const response = await api.get("/location");
   return response.data;
