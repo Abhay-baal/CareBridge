@@ -1,0 +1,960 @@
+"use client";
+
+import AppLayout from "@/components/layout/AppLayout";
+import { useEffect, useMemo, useState } from "react";
+
+const FAMILY = {
+  parent: [
+    { id: "abhay", name: "Abhay", emoji: "👦", role: "Child" },
+    { id: "ananya", name: "Ananya", emoji: "👧", role: "Child" },
+  ],
+  child: [
+    { id: "mom", name: "Mom", emoji: "👩", role: "Parent" },
+    { id: "dad", name: "Dad", emoji: "👨", role: "Parent" },
+  ],
+};
+
+const WALK_LEVELS = [
+  {
+    id: "light",
+    label: "Light",
+    duration: 4,
+    display: "< 5 min",
+    emoji: "🌱",
+  },
+  {
+    id: "easy",
+    label: "Easy",
+    duration: 5,
+    display: "5 min",
+    emoji: "🟢",
+  },
+  {
+    id: "medium",
+    label: "Medium",
+    duration: 10,
+    display: "10 min",
+    emoji: "🔵",
+  },
+  {
+    id: "hard",
+    label: "Hard",
+    duration: 15,
+    display: "15 min",
+    emoji: "🟠",
+  },
+  {
+    id: "extreme",
+    label: "Extreme",
+    duration: 16,
+    display: "15+ min",
+    emoji: "🔥",
+  },
+];
+
+const INITIAL_TASKS = [
+  {
+    id: 1,
+    type: "task",
+    title: "Pick up the medicine",
+    from: "Abhay",
+    fromEmoji: "👦",
+    time: "Today · 5:00 PM",
+    status: "pending",
+  },
+  {
+    id: 2,
+    type: "task",
+    title: "Drink enough water",
+    from: "Ananya",
+    fromEmoji: "👧",
+    time: "Today · 7:00 PM",
+    status: "pending",
+  },
+  {
+    id: 3,
+    type: "walk",
+    title: "Walk for 10 minutes",
+    from: "Abhay",
+    fromEmoji: "👦",
+    time: "Today",
+    level: "Medium",
+    levelEmoji: "🔵",
+    duration: 10,
+    status: "pending",
+  },
+];
+
+const GIVEN_TASKS = [
+  {
+    id: 11,
+    type: "task",
+    title: "Finish your homework",
+    recipients: ["Abhay", "Ananya"],
+    progress: "1 of 2 completed",
+    status: "active",
+  },
+  {
+    id: 12,
+    type: "walk",
+    title: "10 minute walk",
+    recipients: ["Abhay"],
+    level: "Medium",
+    levelEmoji: "🔵",
+    status: "Not started",
+  },
+];
+
+function formatTime(seconds) {
+  const minutes = Math.floor(seconds / 60)
+    .toString()
+    .padStart(2, "0");
+
+  const remaining = (seconds % 60).toString().padStart(2, "0");
+
+  return `${minutes}:${remaining}`;
+}
+
+function Icon({ children, className = "" }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`inline-flex items-center justify-center ${className}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+export default function CarePlanPage() {
+  const [profile, setProfile] = useState("parent");
+  const [activeTab, setActiveTab] = useState("mine");
+  const [screen, setScreen] = useState("home");
+
+  const [tasks, setTasks] = useState(INITIAL_TASKS);
+  const [givenTasks] = useState(GIVEN_TASKS);
+
+  const [taskTitle, setTaskTitle] = useState("");
+  const [selectedRecipients, setSelectedRecipients] = useState([]);
+  const [taskTime, setTaskTime] = useState("Today · 7:00 PM");
+
+  const [selectedWalkLevel, setSelectedWalkLevel] = useState("medium");
+
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [timerFinished, setTimerFinished] = useState(false);
+  const [activeWalk, setActiveWalk] = useState(null);
+
+  const recipients = FAMILY[profile];
+
+  const currentWalkLevel = useMemo(
+    () =>
+      WALK_LEVELS.find((level) => level.id === selectedWalkLevel) ||
+      WALK_LEVELS[2],
+    [selectedWalkLevel]
+  );
+
+  useEffect(() => {
+    if (!timerRunning) return;
+
+    const timer = setInterval(() => {
+      setTimerSeconds((current) => {
+        if (current <= 1) {
+          clearInterval(timer);
+          setTimerRunning(false);
+          setTimerFinished(true);
+          return 0;
+        }
+
+        return current - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timerRunning]);
+
+  const toggleRecipient = (id) => {
+    setSelectedRecipients((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id]
+    );
+  };
+
+  const resetComposer = () => {
+    setTaskTitle("");
+    setSelectedRecipients([]);
+    setTaskTime("Today · 7:00 PM");
+    setSelectedWalkLevel("medium");
+  };
+
+  const openGiveCare = () => {
+    resetComposer();
+    setScreen("give");
+  };
+
+  const openTask = () => {
+    resetComposer();
+    setScreen("task");
+  };
+
+  const openWalk = () => {
+    resetComposer();
+    setScreen("walk");
+  };
+
+  const goHome = () => {
+    setTimerRunning(false);
+    setScreen("home");
+  };
+
+  const assignTask = () => {
+    if (!taskTitle.trim() || selectedRecipients.length === 0) return;
+
+    const names = selectedRecipients
+      .map((id) => recipients.find((person) => person.id === id)?.name)
+      .filter(Boolean);
+
+    const firstRecipient = recipients.find(
+      (person) => person.id === selectedRecipients[0]
+    );
+
+    setTasks((current) => [
+      {
+        id: Date.now(),
+        type: "task",
+        title: taskTitle.trim(),
+        from: profile === "parent" ? "You" : "You",
+        fromEmoji: profile === "parent" ? "❤️" : "❤️",
+        time: taskTime,
+        status: "pending",
+        recipients: names,
+        recipientEmoji: firstRecipient?.emoji,
+      },
+      ...current,
+    ]);
+
+    setActiveTab("given");
+    setScreen("home");
+    resetComposer();
+  };
+
+  const assignWalk = () => {
+    if (selectedRecipients.length === 0) return;
+
+    const names = selectedRecipients
+      .map((id) => recipients.find((person) => person.id === id)?.name)
+      .filter(Boolean);
+
+    setTasks((current) => [
+      {
+        id: Date.now(),
+        type: "walk",
+        title: `Walk for ${currentWalkLevel.display}`,
+        from: "You",
+        fromEmoji: "❤️",
+        time: "Today",
+        level: currentWalkLevel.label,
+        levelEmoji: currentWalkLevel.emoji,
+        duration: currentWalkLevel.duration,
+        status: "pending",
+        recipients: names,
+      },
+      ...current,
+    ]);
+
+    setActiveTab("given");
+    setScreen("home");
+    resetComposer();
+  };
+
+  const completeTask = (id) => {
+    setTasks((current) =>
+      current.map((task) =>
+        task.id === id ? { ...task, status: "completed" } : task
+      )
+    );
+  };
+
+  const startWalk = (walk) => {
+    const durationSeconds = Math.max(60, (walk.duration || 10) * 60);
+
+    setActiveWalk(walk);
+    setTimerSeconds(durationSeconds);
+    setTimerFinished(false);
+    setTimerRunning(true);
+    setScreen("timer");
+  };
+
+  const startSelectedWalk = () => {
+    const walk = {
+      id: Date.now(),
+      type: "walk",
+      title: `${currentWalkLevel.display} walk`,
+      level: currentWalkLevel.label,
+      levelEmoji: currentWalkLevel.emoji,
+      duration: currentWalkLevel.duration,
+    };
+
+    startWalk(walk);
+  };
+
+  const restartWalk = () => {
+    if (!activeWalk) return;
+
+    setTimerSeconds(Math.max(60, (activeWalk.duration || 10) * 60));
+    setTimerFinished(false);
+    setTimerRunning(true);
+  };
+
+  const progress =
+    activeWalk && activeWalk.duration
+      ? Math.min(
+          100,
+          Math.max(
+            0,
+            ((activeWalk.duration * 60 - timerSeconds) /
+              (activeWalk.duration * 60)) *
+              100
+          )
+        )
+      : 0;
+
+  const visibleTasks = activeTab === "mine" ? tasks : givenTasks;
+
+  if (screen === "give") {
+    return (
+      <AppLayout>
+        <div className="mx-auto w-full max-w-2xl">
+          <PageBackButton onClick={goHome} label="Give Care" />
+
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              What would you like to give?
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Choose something helpful for your family.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ActionChoice
+              emoji="📝"
+              title="Task"
+              description="Give someone a task"
+              onClick={openTask}
+            />
+
+            <ActionChoice
+              emoji="🚶"
+              title="Walk"
+              description="Give someone a walking goal"
+              onClick={openWalk}
+            />
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (screen === "task") {
+    return (
+      <AppLayout>
+        <div className="mx-auto w-full max-w-2xl">
+          <PageBackButton onClick={goHome} label="Task" />
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            <SectionTitle
+              emoji="📝"
+              title="Give a Task"
+              subtitle="Keep it simple and helpful."
+            />
+
+            <label className="mt-7 block text-sm font-semibold text-slate-700">
+              What needs to be done?
+            </label>
+
+            <input
+              value={taskTitle}
+              onChange={(event) => setTaskTitle(event.target.value)}
+              placeholder="e.g. Finish your homework"
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white"
+            />
+
+            <label className="mt-6 block text-sm font-semibold text-slate-700">
+              Give to
+            </label>
+
+            <div className="mt-2 space-y-2">
+              {recipients.map((person) => (
+                <RecipientRow
+                  key={person.id}
+                  person={person}
+                  selected={selectedRecipients.includes(person.id)}
+                  onClick={() => toggleRecipient(person.id)}
+                />
+              ))}
+            </div>
+
+            <label className="mt-6 block text-sm font-semibold text-slate-700">
+              When?
+            </label>
+
+            <select
+              value={taskTime}
+              onChange={(event) => setTaskTime(event.target.value)}
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm text-slate-900 outline-none focus:border-slate-400"
+            >
+              <option>Today · 5:00 PM</option>
+              <option>Today · 7:00 PM</option>
+              <option>Tomorrow · 9:00 AM</option>
+              <option>Tomorrow · 6:00 PM</option>
+            </select>
+
+            <button
+              type="button"
+              disabled={!taskTitle.trim() || selectedRecipients.length === 0}
+              onClick={assignTask}
+              className="mt-7 w-full rounded-2xl bg-slate-900 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Give Task ❤️
+            </button>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (screen === "walk") {
+    return (
+      <AppLayout>
+        <div className="mx-auto w-full max-w-2xl">
+          <PageBackButton onClick={goHome} label="Walk" />
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            <SectionTitle
+              emoji="🚶"
+              title="Give a Walk"
+              subtitle="Choose who should take a walk and for how long."
+            />
+
+            <label className="mt-7 block text-sm font-semibold text-slate-700">
+              Who should go for a walk?
+            </label>
+
+            <div className="mt-2 space-y-2">
+              {recipients.map((person) => (
+                <RecipientRow
+                  key={person.id}
+                  person={person}
+                  selected={selectedRecipients.includes(person.id)}
+                  onClick={() => toggleRecipient(person.id)}
+                />
+              ))}
+            </div>
+
+            <label className="mt-6 block text-sm font-semibold text-slate-700">
+              Choose time
+            </label>
+
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {WALK_LEVELS.slice(0, 4).map((level) => (
+                <WalkLevelCard
+                  key={level.id}
+                  level={level}
+                  selected={selectedWalkLevel === level.id}
+                  onClick={() => setSelectedWalkLevel(level.id)}
+                />
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSelectedWalkLevel("extreme")}
+              className={`mt-3 flex w-full items-center justify-between rounded-2xl border px-4 py-3.5 text-left transition ${
+                selectedWalkLevel === "extreme"
+                  ? "border-slate-900 bg-slate-50 ring-2 ring-slate-900/10"
+                  : "border-slate-200 bg-white hover:bg-slate-50"
+              }`}
+            >
+              <div>
+                <p className="text-sm font-bold text-slate-900">
+                  🔥 15+ min
+                </p>
+                <p className="text-xs text-slate-500">Extreme</p>
+              </div>
+
+              {selectedWalkLevel === "extreme" && (
+                <span className="text-sm font-bold text-slate-900">✓</span>
+              )}
+            </button>
+
+            <div className="mt-5 rounded-2xl bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Selected
+              </p>
+              <p className="mt-1 text-sm font-bold text-slate-900">
+                {currentWalkLevel.emoji} {currentWalkLevel.label} ·{" "}
+                {currentWalkLevel.display}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              disabled={selectedRecipients.length === 0}
+              onClick={assignWalk}
+              className="mt-5 w-full rounded-2xl bg-slate-900 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Assign Walk 🚶
+            </button>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (screen === "timer") {
+    return (
+      <AppLayout>
+        <div className="mx-auto w-full max-w-lg">
+          <PageBackButton onClick={goHome} label="Walk" />
+
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="px-6 pb-8 pt-10 text-center sm:px-10">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-50 text-4xl">
+                {timerFinished ? "🎉" : "🚶"}
+              </div>
+
+              <h1 className="mt-6 text-2xl font-bold text-slate-900">
+                {timerFinished ? "Walk Complete!" : "Your Walk"}
+              </h1>
+
+              {timerFinished ? (
+                <>
+                  <p className="mt-2 text-sm text-slate-500">
+                    You did it. Keep taking care of each other ❤️
+                  </p>
+
+                  <div className="mt-8 rounded-2xl bg-slate-50 px-5 py-6">
+                    <p className="text-4xl font-black tracking-tight text-slate-900">
+                      Done
+                    </p>
+                    <p className="mt-2 text-sm text-slate-500">
+                      {activeWalk?.levelEmoji} {activeWalk?.level} Walk
+                    </p>
+                  </div>
+
+                  <div className="mt-5 grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={restartWalk}
+                      className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                    >
+                      Again
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={goHome}
+                      className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="mt-2 text-sm text-slate-500">
+                    {activeWalk?.levelEmoji} {activeWalk?.level} Walk
+                  </p>
+
+                  <div className="mt-8">
+                    <p className="text-6xl font-black tracking-tight text-slate-900">
+                      {formatTime(timerSeconds)}
+                    </p>
+
+                    <div className="mt-7 h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full bg-slate-900 transition-all duration-1000"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setTimerRunning((current) => !current)}
+                    className="mt-8 w-full rounded-2xl bg-slate-900 px-5 py-3.5 text-sm font-bold text-white hover:bg-slate-800"
+                  >
+                    {timerRunning ? "Pause" : "Resume"}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout>
+      <div className="mx-auto w-full max-w-4xl">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🫶</span>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                Care
+              </h1>
+            </div>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Help each other with little things ❤️
+            </p>
+          </div>
+
+          <div className="flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setProfile("parent")}
+              className={`rounded-lg px-3 py-2 text-xs font-bold transition ${
+                profile === "parent"
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-500 hover:bg-slate-50"
+              }`}
+            >
+              Parent view
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setProfile("child")}
+              className={`rounded-lg px-3 py-2 text-xs font-bold transition ${
+                profile === "child"
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-500 hover:bg-slate-50"
+              }`}
+            >
+              Child view
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={openGiveCare}
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-4 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800 active:scale-[0.99]"
+        >
+          <span className="text-lg">＋</span>
+          Give Care
+          <span className="ml-1 text-xs font-medium text-slate-300">
+            Task or Walk
+          </span>
+        </button>
+
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-1 shadow-sm">
+          <div className="grid grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab("mine")}
+              className={`rounded-xl px-4 py-3 text-sm font-bold transition ${
+                activeTab === "mine"
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-500 hover:bg-slate-50"
+              }`}
+            >
+              📋 My Care
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("given")}
+              className={`rounded-xl px-4 py-3 text-sm font-bold transition ${
+                activeTab === "given"
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-500 hover:bg-slate-50"
+              }`}
+            >
+              ❤️ Given by Me
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-wide text-slate-400">
+                {activeTab === "mine" ? "My Care" : "Given by Me"}
+              </h2>
+            </div>
+
+            <span className="text-xs text-slate-400">
+              {activeTab === "mine"
+                ? "Things for you"
+                : "Things you gave"}
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {visibleTasks.map((task) => (
+              <CareCard
+                key={task.id}
+                task={task}
+                activeTab={activeTab}
+                onComplete={completeTask}
+                onStartWalk={startWalk}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-xl">
+              🚶
+            </div>
+
+            <div>
+              <h3 className="font-bold text-slate-900">Care Walk</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                A simple timed walk. No step counter needed.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {WALK_LEVELS.map((level) => (
+              <div
+                key={level.id}
+                className="rounded-2xl bg-slate-50 px-3 py-3 text-center"
+              >
+                <div className="text-lg">{level.emoji}</div>
+                <p className="mt-1 text-xs font-bold text-slate-800">
+                  {level.label}
+                </p>
+                <p className="mt-0.5 text-[11px] text-slate-400">
+                  {level.display}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
+
+function PageBackButton({ onClick, label }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mb-6 flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-900"
+    >
+      <span className="text-lg">←</span>
+      {label}
+    </button>
+  );
+}
+
+function SectionTitle({ emoji, title, subtitle }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-xl">
+        {emoji}
+      </div>
+
+      <div>
+        <h1 className="text-xl font-bold text-slate-900">{title}</h1>
+        <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+      </div>
+    </div>
+  );
+}
+
+function ActionChoice({ emoji, title, description, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+    >
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-2xl">
+        {emoji}
+      </div>
+
+      <h2 className="mt-5 text-lg font-bold text-slate-900">{title}</h2>
+
+      <p className="mt-1 text-sm text-slate-500">{description}</p>
+
+      <div className="mt-5 text-xs font-bold text-slate-400 group-hover:text-slate-700">
+        Choose →
+      </div>
+    </button>
+  );
+}
+
+function RecipientRow({ person, selected, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 transition ${
+        selected
+          ? "border-slate-900 bg-slate-50 ring-2 ring-slate-900/10"
+          : "border-slate-200 bg-white hover:bg-slate-50"
+      }`}
+    >
+      <span className="flex items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-lg">
+          {person.emoji}
+        </span>
+
+        <span className="text-left">
+          <span className="block text-sm font-bold text-slate-900">
+            {person.name}
+          </span>
+          <span className="block text-xs text-slate-400">
+            {person.role}
+          </span>
+        </span>
+      </span>
+
+      <span
+        className={`flex h-6 w-6 items-center justify-center rounded-full border text-xs font-bold ${
+          selected
+            ? "border-slate-900 bg-slate-900 text-white"
+            : "border-slate-300 text-transparent"
+        }`}
+      >
+        ✓
+      </span>
+    </button>
+  );
+}
+
+function WalkLevelCard({ level, selected, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-2xl border p-4 text-left transition ${
+        selected
+          ? "border-slate-900 bg-slate-50 ring-2 ring-slate-900/10"
+          : "border-slate-200 bg-white hover:bg-slate-50"
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-xl">{level.emoji}</span>
+
+        {selected && (
+          <span className="text-xs font-bold text-slate-900">✓</span>
+        )}
+      </div>
+
+      <p className="mt-3 text-sm font-bold text-slate-900">
+        {level.display}
+      </p>
+
+      <p className="mt-0.5 text-xs text-slate-500">{level.label}</p>
+    </button>
+  );
+}
+
+function CareCard({ task, activeTab, onComplete, onStartWalk }) {
+  const completed = task.status === "completed";
+
+  return (
+    <div
+      className={`rounded-3xl border bg-white p-4 shadow-sm transition sm:p-5 ${
+        completed
+          ? "border-emerald-100 bg-emerald-50/30"
+          : "border-slate-200"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-xl">
+          {task.type === "walk" ? "🚶" : "📝"}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h3
+                className={`font-bold ${
+                  completed
+                    ? "text-slate-400 line-through"
+                    : "text-slate-900"
+                }`}
+              >
+                {task.title}
+              </h3>
+
+              {activeTab === "mine" ? (
+                <p className="mt-1 text-xs text-slate-400">
+                  From {task.fromEmoji} {task.from}
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-slate-400">
+                  →{" "}
+                  {task.recipients?.length
+                    ? task.recipients.join(" + ")
+                    : "Family"}
+                </p>
+              )}
+            </div>
+
+            {task.type === "walk" && (
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600">
+                {task.levelEmoji} {task.level}
+              </span>
+            )}
+          </div>
+
+          <p className="mt-3 text-xs text-slate-400">{task.time}</p>
+
+          {activeTab === "mine" && task.type === "walk" && !completed && (
+            <button
+              type="button"
+              onClick={() => onStartWalk(task)}
+              className="mt-4 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800"
+            >
+              Start Walk
+            </button>
+          )}
+
+          {activeTab === "mine" &&
+            task.type === "task" &&
+            !completed && (
+              <button
+                type="button"
+                onClick={() => onComplete(task.id)}
+                className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+              >
+                Complete
+              </button>
+            )}
+
+          {completed && (
+            <p className="mt-3 text-xs font-bold text-emerald-600">
+              ✓ Completed
+            </p>
+          )}
+
+          {activeTab === "given" && task.progress && (
+            <p className="mt-3 text-xs font-semibold text-slate-500">
+              {task.progress}
+            </p>
+          )}
+
+          {activeTab === "given" && task.status && !task.progress && (
+            <p className="mt-3 text-xs font-semibold text-slate-500">
+              {task.status}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
