@@ -23,13 +23,23 @@ const {
   joinFamily,
 } = require("../controllers/familyController");
 
+const {
+  getFamilyChatMembers,
+  getFamilyGroupMessages,
+  sendFamilyGroupMessage,
+  getDirectFamilyMessages,
+  sendDirectFamilyMessage,
+} = require("../controllers/familyChatController");
+
 router.use(
   authenticate,
   authorize("parent", "child")
 );
 
 /*
- * NEW FAMILY FOUNDATION
+ * =========================================================
+ * FAMILY FOUNDATION
+ * =========================================================
  */
 
 router.get(
@@ -48,8 +58,12 @@ router.post(
 );
 
 /*
+ * =========================================================
  * EXISTING FAMILY COMMUNICATION
- * Kept intact.
+ *
+ * DO NOT REMOVE.
+ * Dashboard Messages / Snaps / Streak continue using these.
+ * =========================================================
  */
 
 router.get(
@@ -85,6 +99,43 @@ router.post(
 router.delete(
   "/snaps/:id",
   deleteFamilySnap
+);
+
+/*
+ * =========================================================
+ * NEW CHAT SYSTEM
+ *
+ * /chat/group
+ *     Family Group
+ *
+ * /chat/direct/:userId
+ *     Individual family-member chat
+ * =========================================================
+ */
+
+router.get(
+  "/chat/members",
+  getFamilyChatMembers
+);
+
+router.get(
+  "/chat/group/messages",
+  getFamilyGroupMessages
+);
+
+router.post(
+  "/chat/group/messages",
+  sendFamilyGroupMessage
+);
+
+router.get(
+  "/chat/direct/:userId",
+  getDirectFamilyMessages
+);
+
+router.post(
+  "/chat/direct/:userId",
+  sendDirectFamilyMessage
 );
 
 module.exports = router;
