@@ -3,6 +3,7 @@ const FamilyMessageStreak = require("../models/FamilyMessageStreak");
 const FamilySnap = require("../models/FamilySnap");
 const ParentChild = require("../models/ParentChild");
 const User = require("../models/User");
+const Family = require("../models/Family");
 
 /*
  * Family membership is calculated from the existing ParentChild
@@ -17,42 +18,43 @@ const User = require("../models/User");
  * All four users belong to the same family graph.
  */
 const getFamilyMemberIds = async (userId) => {
-  const visited = new Set();
-  const queue = [userId.toString()];
+  /*
+   * Family is now the source of truth for family membership.
+   *
+   * This means:
+   *   Father
+   *   Mother
+   *   Child 1
+   *   Child 2
+   *
+   * are all immediately available to Family Messages,
+   * Family Snaps and other family-wide features.
+   *
+   * ParentChild remains responsible for parent-child-specific
+   * features such as Chat, Care, Location and SOS.
+   */
+  const family = await Family.findOne({
+    $or: [
+      { father: userId },
+      { mother: userId },
+      { children: userId },
+    ],
+  }).select("father mother children");
 
-  while (queue.length > 0) {
-    const current = queue.shift();
-
-    if (visited.has(current)) {
-      continue;
-    }
-
-    visited.add(current);
-
-    const relationships = await ParentChild.find({
-      $or: [
-        { parent: current },
-        { child: current },
-      ],
-    }).select("parent child");
-
-    for (const relationship of relationships) {
-      const parentId = relationship.parent.toString();
-      const childId = relationship.child.toString();
-
-      if (!visited.has(parentId)) {
-        queue.push(parentId);
-      }
-
-      if (!visited.has(childId)) {
-        queue.push(childId);
-      }
-    }
+  if (!family) {
+    return [userId.toString()];
   }
 
-  return [...visited];
-};
+  const ids = [
+    family.father,
+    family.mother,
+    ...(family.children || []),
+  ]
+    .filter(Boolean)
+    .map((id) => id.toString());
 
+  return [...new Set(ids)];
+};
 
 const getFamilyKey = (ids) =>
   [...new Set(ids.map(String))].sort().join(":");
