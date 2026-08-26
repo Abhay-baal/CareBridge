@@ -76,6 +76,7 @@ const createCarePlan = async (req, res) => {
     }
 
     const carePlan = await CarePlan.create({
+      createdBy: req.user.id,
       parent: parent._id,
       child: child._id,
       parentChild: relationship._id,

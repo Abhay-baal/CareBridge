@@ -2,6 +2,13 @@ const mongoose = require("mongoose");
 
 const carePlanSchema = new mongoose.Schema(
   {
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+
     parent: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Parent",
