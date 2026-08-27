@@ -2,18 +2,6 @@ const EmergencyContact = require("../models/EmergencyContact");
 const Parent = require("../models/Parent");
 const ParentChild = require("../models/ParentChild");
 
-/*
- * Resolve which Parent profile the request is allowed to access.
- *
- * Parent:
- *   -> their own Parent profile
- *
- * Child:
- *   -> the currently active ParentChild relationship
- *
- * This keeps both roles supported while preventing a child
- * from accessing contacts belonging to an unrelated parent.
- */
 const getAuthorizedParent = async (req) => {
   if (req.user.role === "parent") {
     return Parent.findOne({
@@ -39,12 +27,6 @@ const getAuthorizedParent = async (req) => {
   return null;
 };
 
-/*
- * GET /api/emergency
- *
- * Parent -> own contacts
- * Child  -> active parent's contacts
- */
 const getContacts = async (req, res) => {
   try {
     const parent = await getAuthorizedParent(req);
@@ -79,12 +61,6 @@ const getContacts = async (req, res) => {
   }
 };
 
-/*
- * POST /api/emergency
- *
- * Parent -> create contact for themselves
- * Child  -> create contact for their active parent
- */
 const createContact = async (req, res) => {
   try {
     const parent = await getAuthorizedParent(req);
@@ -130,12 +106,6 @@ const createContact = async (req, res) => {
   }
 };
 
-/*
- * PUT /api/emergency/:id
- *
- * Parent -> edit their own contact
- * Child  -> edit contact belonging to active parent
- */
 const updateContact = async (req, res) => {
   try {
     const parent = await getAuthorizedParent(req);
@@ -150,20 +120,45 @@ const updateContact = async (req, res) => {
       });
     }
 
-    const { name, relation, phone } = req.body;
-
     const updateData = {};
 
-    if (name !== undefined) {
-      updateData.name = String(name).trim();
+    if (req.body.name !== undefined) {
+      const name = String(req.body.name).trim();
+
+      if (!name) {
+        return res.status(400).json({
+          success: false,
+          message: "Name cannot be empty",
+        });
+      }
+
+      updateData.name = name;
     }
 
-    if (relation !== undefined) {
-      updateData.relation = String(relation).trim();
+    if (req.body.relation !== undefined) {
+      const relation = String(req.body.relation).trim();
+
+      if (!relation) {
+        return res.status(400).json({
+          success: false,
+          message: "Relation cannot be empty",
+        });
+      }
+
+      updateData.relation = relation;
     }
 
-    if (phone !== undefined) {
-      updateData.phone = String(phone).trim();
+    if (req.body.phone !== undefined) {
+      const phone = String(req.body.phone).trim();
+
+      if (!phone) {
+        return res.status(400).json({
+          success: false,
+          message: "Phone cannot be empty",
+        });
+      }
+
+      updateData.phone = phone;
     }
 
     const contact = await EmergencyContact.findOneAndUpdate(
@@ -200,12 +195,6 @@ const updateContact = async (req, res) => {
   }
 };
 
-/*
- * DELETE /api/emergency/:id
- *
- * Parent -> delete their own contact
- * Child  -> delete contact belonging to active parent
- */
 const deleteContact = async (req, res) => {
   try {
     const parent = await getAuthorizedParent(req);
