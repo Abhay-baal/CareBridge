@@ -39,14 +39,6 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
-    connectionCode: {
-      type: String,
-      unique: true,
-      sparse: true,
-      uppercase: true,
-      trim: true,
-    },
-
     isVerified: {
       type: Boolean,
       default: false,
