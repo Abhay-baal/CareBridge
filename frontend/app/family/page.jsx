@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import {
   createFamily,
@@ -35,8 +35,6 @@ const getLoggedInRole = () => {
 };
 
 export default function FamilyPage() {
-  const router = useRouter();
-
   const [mode, setMode] = useState(null);
   const [position, setPosition] = useState("");
   const [familyCode, setFamilyCode] = useState("");
@@ -159,16 +157,8 @@ export default function FamilyPage() {
       <main className="min-h-screen bg-gray-50 px-4 py-6">
         <div className="mx-auto max-w-md">
 
-          <div className="mb-6 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg shadow-sm"
-            >
-              ←
-            </button>
-
-            <div>
+          <div className="mb-6 flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
               <h1 className="text-2xl font-black text-gray-900">
                 🏡 Family
               </h1>
@@ -177,6 +167,20 @@ export default function FamilyPage() {
                 Your family connection
               </p>
             </div>
+
+            <Link
+              href="/dashboard"
+              aria-label="Open Home"
+              className="group mt-1 flex shrink-0 items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3.5 py-2.5 shadow-sm transition hover:border-gray-300 hover:shadow-md active:scale-95"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-lg transition group-hover:bg-gray-900 group-hover:text-white">
+                🏠
+              </span>
+
+              <span className="text-xs font-black text-gray-900">
+                Home
+              </span>
+            </Link>
           </div>
 
           <div className="rounded-3xl bg-gray-900 p-6 text-white shadow-sm">
@@ -279,16 +283,8 @@ export default function FamilyPage() {
     <main className="min-h-screen bg-gray-50 px-4 py-6">
       <div className="mx-auto w-full max-w-md">
 
-        <div className="mb-6 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg shadow-sm"
-          >
-            ←
-          </button>
-
-          <div>
+        <div className="mb-6 flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-black text-gray-900">
               🏡 Family
             </h1>
@@ -297,6 +293,20 @@ export default function FamilyPage() {
               Connect your family simply
             </p>
           </div>
+
+          <Link
+            href="/dashboard"
+            aria-label="Open Home"
+            className="group mt-1 flex shrink-0 items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3.5 py-2.5 shadow-sm transition hover:border-gray-300 hover:shadow-md active:scale-95"
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-lg transition group-hover:bg-gray-900 group-hover:text-white">
+              🏠
+            </span>
+
+            <span className="text-xs font-black text-gray-900">
+              Home
+            </span>
+          </Link>
         </div>
 
         {error && (
