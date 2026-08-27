@@ -16,7 +16,6 @@ export default function RegisterForm() {
     email: "",
     password: "",
     phone: "",
-    connectionCode: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -57,11 +56,6 @@ export default function RegisterForm() {
       newErrors.phone = "Phone number must be 10 digits";
     }
 
-    if (role === "child" && !formData.connectionCode.trim()) {
-      newErrors.connectionCode =
-        "Parent connection code is required";
-    }
-
     setErrors(newErrors);
 
     return Object.keys(newErrors).length === 0;
@@ -86,11 +80,6 @@ export default function RegisterForm() {
         phone: formData.phone,
         role,
       };
-
-      if (role === "child") {
-        payload.connectionCode =
-          formData.connectionCode.toUpperCase().trim();
-      }
 
       const data = await registerUser(payload);
 
@@ -206,24 +195,6 @@ export default function RegisterForm() {
         name="password"
         error={errors.password}
       />
-
-      {role === "child" && (
-        <>
-          <Input
-            label="Parent Connection Code"
-            type="text"
-            placeholder="Example: CB-7K4P92"
-            value={formData.connectionCode}
-            onChange={handleChange}
-            name="connectionCode"
-            error={errors.connectionCode}
-          />
-
-          <p className="mb-4 -mt-2 text-xs text-gray-500">
-            Ask your parent for their CareBridge connection code.
-          </p>
-        </>
-      )}
 
       {serverError && (
         <p className="mb-4 text-sm text-red-500">
