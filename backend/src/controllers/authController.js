@@ -3,35 +3,6 @@ const User = require("../models/User");
 const Parent = require("../models/Parent");
 const jwt = require("jsonwebtoken");
 
-const generateConnectionCode = () => {
-  const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-  let code = "";
-
-  for (let i = 0; i < 6; i++) {
-    code += characters.charAt(
-      Math.floor(Math.random() * characters.length)
-    );
-  }
-
-  return `CB-${code}`;
-};
-
-const generateUniqueConnectionCode = async () => {
-  let connectionCode;
-  let existingUser;
-
-  do {
-    connectionCode = generateConnectionCode();
-
-    existingUser = await User.findOne({
-      connectionCode,
-    });
-  } while (existingUser);
-
-  return connectionCode;
-};
-
 const registerUser = async (req, res) => {
   try {
     const {
@@ -40,7 +11,6 @@ const registerUser = async (req, res) => {
       password,
       phone,
       role,
-      connectionCode,
     } = req.body;
 
     if (!fullName || !email || !password || !phone || !role) {
@@ -86,29 +56,6 @@ const registerUser = async (req, res) => {
       });
     }
 
-    let parent = null;
-
-    if (role === "child") {
-      if (!connectionCode) {
-        return res.status(400).json({
-          success: false,
-          message: "Parent connection code is required",
-        });
-      }
-
-      parent = await User.findOne({
-        connectionCode: connectionCode.toUpperCase().trim(),
-        role: "parent",
-      });
-
-      if (!parent) {
-        return res.status(404).json({
-          success: false,
-          message: "Invalid parent connection code",
-        });
-      }
-    }
-
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const userData = {
@@ -118,17 +65,6 @@ const registerUser = async (req, res) => {
       phone,
       role,
     };
-
-    // Keep the legacy parent relationship during migration.
-    if (role === "child") {
-      userData.parent = parent._id;
-    }
-
-    // Only parent accounts receive a connection code.
-    if (role === "parent") {
-      userData.connectionCode =
-        await generateUniqueConnectionCode();
-    }
 
     const user = await User.create(userData);
 
@@ -150,7 +86,6 @@ const registerUser = async (req, res) => {
         email: user.email,
         role: user.role,
         parent: user.parent || null,
-        connectionCode: user.connectionCode || null,
       },
     });
   } catch (error) {
@@ -219,7 +154,6 @@ const loginUser = async (req, res) => {
         email: user.email,
         role: user.role,
         parent: user.parent || null,
-        connectionCode: user.connectionCode || null,
       },
     });
   } catch (error) {
