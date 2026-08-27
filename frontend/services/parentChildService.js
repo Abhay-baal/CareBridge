@@ -11,18 +11,6 @@ export const getParentChildRelationships =
 export const getParents =
   getParentChildRelationships;
 
-export const connectParent =
-  async (connectionCode) => {
-    const response =
-      await api.post(
-        "/parent-child/connect",
-        {
-          connectionCode,
-        }
-      );
-
-    return response.data;
-  };
 
 export const removeParent =
   async (relationshipId) => {
