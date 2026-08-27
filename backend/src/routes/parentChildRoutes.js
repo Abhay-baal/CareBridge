@@ -8,7 +8,6 @@ const {
 } = require("../middleware/authMiddleware");
 
 const {
-  connectParent,
   getParents,
   removeParent,
   switchActiveParent,
@@ -25,11 +24,6 @@ router.get(
 );
 
 // Child-only relationship management
-router.post(
-  "/connect",
-  authorize("child"),
-  connectParent
-);
 
 router.delete(
   "/:id",
