@@ -2,32 +2,39 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  HeartPulse,
+  House,
+  MessageCircle,
+  Siren,
+  UserRound,
+} from "lucide-react";
 
 const navigation = [
   {
     href: "/child/dashboard",
     label: "Home",
-    icon: "🏠",
-  },
-  {
-    href: "/child/chat",
-    label: "Chat",
-    icon: "💬",
-  },
-  {
-    href: "/child/emergency",
-    label: "Emergency",
-    icon: "🚨",
+    icon: House,
   },
   {
     href: "/child/care",
     label: "Care",
-    icon: "❤️",
+    icon: HeartPulse,
+  },
+  {
+    href: "/child/chat",
+    label: "Chat",
+    icon: MessageCircle,
+  },
+  {
+    href: "/child/emergency",
+    label: "Emergency",
+    icon: Siren,
   },
   {
     href: "/child/profile",
     label: "Profile",
-    icon: "👤",
+    icon: UserRound,
   },
 ];
 
@@ -35,30 +42,30 @@ export default function ChildNavigation() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] backdrop-blur">
-      <div className="mx-auto flex max-w-md items-center justify-between px-2 py-1.5">
+    <nav className="apple-bottom-nav fixed bottom-0 left-0 right-0 z-50">
+      <div className="apple-bottom-nav__inner mx-auto flex max-w-md items-center justify-between">
         {navigation.map((item) => {
           const active =
             pathname === item.href ||
             pathname.startsWith(`${item.href}/`);
+          const Icon = item.icon;
 
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-semibold transition active:scale-95 ${
+              className={`apple-bottom-nav__item flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-semibold transition active:scale-95 ${
                 active
-                  ? "bg-gray-100 text-gray-900"
-                  : "text-gray-500 hover:text-gray-900"
+                  ? item.label === "Emergency"
+                    ? "apple-bottom-nav__item--emergency-active"
+                    : "apple-bottom-nav__item--active"
+                  : ""
               }`}
+              aria-current={active ? "page" : undefined}
             >
-              <span className="text-lg leading-none">
-                {item.icon}
-              </span>
+              <Icon className="h-[21px] w-[21px]" strokeWidth={active ? 2.5 : 2} />
 
-              <span className="truncate">
-                {item.label}
-              </span>
+              <span className="truncate">{item.label}</span>
             </Link>
           );
         })}
