@@ -98,101 +98,6 @@ const syncChildIntoFamily = async (parentId, childId) => {
   });
 };
 
-const connectParent = async (req, res) => {
-  try {
-    const { connectionCode } = req.body;
-
-    if (!connectionCode) {
-      return res.status(400).json({
-        success: false,
-        message: "Parent connection code is required",
-      });
-    }
-
-    const child = await User.findOne({
-      _id: req.user.id,
-      role: "child",
-    });
-
-    if (!child) {
-      return res.status(404).json({
-        success: false,
-        message: "Child account not found",
-      });
-    }
-
-    const parent = await User.findOne({
-      connectionCode: connectionCode.toUpperCase().trim(),
-      role: "parent",
-    });
-
-    if (!parent) {
-      return res.status(404).json({
-        success: false,
-        message: "Invalid parent connection code",
-      });
-    }
-
-    if (parent._id.equals(child._id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid parent",
-      });
-    }
-
-    const existingRelationship = await ParentChild.findOne({
-      parent: parent._id,
-      child: child._id,
-    });
-
-    if (existingRelationship) {
-      return res.status(400).json({
-        success: false,
-        message: "Parent is already connected",
-        data: existingRelationship,
-      });
-    }
-
-    const existingActiveParent = await ParentChild.findOne({
-      child: child._id,
-      active: true,
-    });
-
-    const relationship = await ParentChild.create({
-      parent: parent._id,
-      child: child._id,
-      active: !existingActiveParent,
-    });
-
-    const populatedRelationship = await ParentChild.findById(
-      relationship._id
-    ).populate(
-      "parent",
-      "fullName email phone connectionCode"
-    );
-
-    return res.status(201).json({
-      success: true,
-      message: "Parent connected successfully",
-      data: populatedRelationship,
-    });
-  } catch (error) {
-    console.error(error);
-
-    if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: "Parent is already connected",
-      });
-    }
-
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
-  }
-};
-
 const getParents = async (req, res) => {
   try {
     const query =
@@ -203,7 +108,7 @@ const getParents = async (req, res) => {
     const relationships = await ParentChild.find(query)
       .populate(
         "parent",
-        "fullName email phone connectionCode"
+        "fullName email phone"
       )
       .populate(
         "child",
@@ -305,7 +210,7 @@ const switchActiveParent = async (req, res) => {
       relationship._id
     ).populate(
       "parent",
-      "fullName email phone connectionCode"
+      "fullName email phone"
     );
 
     return res.status(200).json({
@@ -324,7 +229,6 @@ const switchActiveParent = async (req, res) => {
 };
 
 module.exports = {
-  connectParent,
   getParents,
   removeParent,
   switchActiveParent,
