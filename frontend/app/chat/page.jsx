@@ -194,15 +194,15 @@ const MessageBubble = ({
       <div
         className={`max-w-[80%] rounded-2xl px-4 py-3 ${
           mine
-            ? "rounded-br-md bg-blue-600 text-white"
-            : "rounded-bl-md bg-gray-100 text-gray-900"
+            ? "rounded-br-md bg-rose-100 text-rose-950"
+            : "rounded-bl-md bg-white text-gray-900 shadow-sm ring-1 ring-rose-100"
         }`}
       >
         {!mine && (
           <p
             className={`mb-1 text-[10px] font-semibold ${
               mine
-                ? "text-blue-100"
+                ? "text-rose-400"
                 : "text-gray-500"
             }`}
           >
@@ -222,7 +222,7 @@ const MessageBubble = ({
               <p
                 className={`mt-2 text-[10px] ${
                   mine
-                    ? "text-blue-100"
+                    ? "text-rose-400"
                     : "text-gray-500"
                 }`}
               >
@@ -233,7 +233,7 @@ const MessageBubble = ({
             <div
               className={`rounded-xl px-4 py-5 text-center text-sm ${
                 mine
-                  ? "bg-blue-700 text-blue-100"
+                  ? "bg-rose-200 text-rose-700"
                   : "bg-gray-200 text-gray-500"
               }`}
             >
@@ -249,7 +249,7 @@ const MessageBubble = ({
         <div
           className={`mt-1 text-[10px] ${
             mine
-              ? "text-blue-100"
+              ? "text-rose-400"
               : "text-gray-500"
           }`}
         >
@@ -297,7 +297,7 @@ const EmptyState = ({
   </div>
 );
 
-export default function ChatPage() {
+export default function ChatPage({ childMode = false }) {
   const [role, setRole] = useState(null);
 
   const [family, setFamily] =
@@ -349,6 +349,13 @@ export default function ChatPage() {
 
   const currentUserId =
     getUserId();
+
+  const homePath = childMode
+    ? "/child/dashboard"
+    : "/dashboard";
+  const chatPath = childMode
+    ? "/child/chat"
+    : "/chat";
 
   /*
    * Every family member except yourself.
@@ -776,7 +783,7 @@ export default function ChatPage() {
 
   if (!role) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50">
+      <main className="flex h-dvh items-center justify-center overflow-hidden bg-[#fafafa]">
         <div className="text-sm text-gray-500">
           Loading chat...
         </div>
@@ -790,7 +797,7 @@ export default function ChatPage() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50">
+      <main className="flex h-dvh items-center justify-center overflow-hidden bg-[#fafafa]">
         <div className="text-sm text-gray-500">
           Loading family chat...
         </div>
@@ -799,16 +806,16 @@ export default function ChatPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="flex h-dvh flex-col overflow-hidden bg-[#fafafa] px-4 pb-5 pt-5">
       {error && (
-        <div className="mx-auto max-w-5xl px-4 pt-3">
-          <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+        <div className="mx-auto max-w-5xl pb-3">
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
             {error}
           </div>
         </div>
       )}
 
-      <div className="mx-auto flex h-screen max-w-5xl overflow-hidden border-x border-gray-200 bg-white shadow-sm">
+      <div className="mx-auto flex min-h-0 w-full flex-1 max-w-5xl overflow-hidden rounded-3xl border border-rose-100 bg-white shadow-[0_14px_32px_rgba(244,114,182,0.08)]">
 
         {/* ================================================= */}
         {/* CHAT LIST */}
@@ -819,35 +826,37 @@ export default function ChatPage() {
             selectedPerson
               ? "hidden md:flex"
               : "flex"
-          } w-full shrink-0 flex-col border-r border-gray-200 md:w-[340px]`}
+          } w-full shrink-0 flex-col border-r border-rose-100 bg-white md:w-[360px]`}
         >
-          <div className="border-b px-5 pb-4 pt-5">
+          <div className="border-b border-rose-100 bg-gradient-to-r from-rose-50 via-pink-50 to-orange-50 px-5 pb-5 pt-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-black tracking-tight text-gray-900">
                   Chat
                 </h1>
 
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm font-medium text-gray-500">
                   Family conversations
                 </p>
               </div>
 
               <Link
-                href={
-                  role ===
-                  "child"
-                    ? "/child/dashboard"
-                    : "/dashboard"
-                }
-                className="rounded-full border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                href={homePath}
+                aria-label="Open Home"
+                className="group flex shrink-0 items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3.5 py-2.5 shadow-sm transition hover:border-gray-300 hover:shadow-md active:scale-95"
               >
-                Back
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-lg transition group-hover:bg-gray-900 group-hover:text-white">
+                  🏠
+                </span>
+
+                <span className="text-xs font-black text-gray-900">
+                  Home
+                </span>
               </Link>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto pb-20">
+          <div className="flex-1 overflow-y-auto bg-gradient-to-b from-rose-50/50 to-[#fafafa] px-2 py-2 pb-20">
 
             {/* FAMILY GROUP */}
 
@@ -863,10 +872,10 @@ export default function ChatPage() {
                     "Family Group",
                 })
               }
-              className={`flex w-full items-center gap-3 border-b px-5 py-4 text-left transition ${
+              className={`flex w-full items-center gap-3 rounded-2xl px-3 py-4 text-left transition ${
                 isGroup
-                  ? "bg-indigo-50"
-                  : "bg-white hover:bg-gray-50"
+                  ? "bg-rose-100 text-rose-950 shadow-sm"
+                  : "bg-transparent hover:bg-white"
               }`}
             >
               <Avatar
@@ -876,7 +885,7 @@ export default function ChatPage() {
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-3">
-                  <h2 className="truncate font-semibold text-gray-900">
+                  <h2 className={`truncate font-black ${isGroup ? "text-rose-950" : "text-gray-900"}`}>
                     Family Group
                   </h2>
 
@@ -887,7 +896,7 @@ export default function ChatPage() {
                   </span>
                 </div>
 
-                <p className="mt-1 truncate text-sm text-gray-500">
+                <p className={`mt-1 truncate text-sm ${isGroup ? "text-rose-500" : "text-gray-500"}`}>
                   {latestGroupMessage
                     ? `${
                         latestGroupMessage
@@ -908,7 +917,7 @@ export default function ChatPage() {
 
             {individualMembers.length ===
             0 ? (
-              <div className="px-6 py-10 text-center text-sm text-gray-500">
+              <div className="px-6 py-10 text-center text-sm font-medium text-gray-500">
                 No other family members yet.
               </div>
             ) : (
@@ -928,10 +937,10 @@ export default function ChatPage() {
                           person
                         )
                       }
-                      className={`flex w-full items-center gap-3 border-b px-5 py-4 text-left transition ${
+                      className={`flex w-full items-center gap-3 rounded-2xl px-3 py-4 text-left transition ${
                         selected
-                          ? "bg-blue-50"
-                          : "bg-white hover:bg-gray-50"
+                          ? "bg-white shadow-sm ring-1 ring-rose-200"
+                          : "bg-transparent hover:bg-white"
                       }`}
                     >
                       <Avatar
@@ -971,9 +980,9 @@ export default function ChatPage() {
           } min-w-0 flex-1 flex-col`}
         >
           {!selectedPerson ? (
-            <div className="flex flex-1 items-center justify-center text-center">
+              <div className="flex flex-1 items-center justify-center bg-gradient-to-br from-rose-50/60 via-white to-orange-50/40 text-center">
               <div>
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-indigo-100 text-2xl">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-100 to-rose-100 text-2xl shadow-sm">
                   💬
                 </div>
 
@@ -990,21 +999,8 @@ export default function ChatPage() {
             <>
               {/* HEADER */}
 
-              <div className="border-b bg-white px-4 py-3">
+              <div className="border-b border-rose-100 bg-gradient-to-r from-rose-50 via-pink-50 to-orange-50 px-4 py-4">
                 <div className="mx-auto flex max-w-3xl items-center gap-3">
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSelectedPerson(
-                        null
-                      )
-                    }
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50"
-                    aria-label="Back"
-                  >
-                    ←
-                  </button>
 
                   {isGroup ? (
                     <Avatar
@@ -1019,8 +1015,8 @@ export default function ChatPage() {
                     />
                   )}
 
-                  <div className="min-w-0">
-                    <h1 className="truncate font-semibold text-gray-900">
+                  <div className="min-w-0 flex-1">
+                    <h1 className="truncate font-black text-gray-900">
                       {isGroup
                         ? "Family Group"
                         : getDisplayName(
@@ -1028,7 +1024,7 @@ export default function ChatPage() {
                           )}
                     </h1>
 
-                    <p className="text-xs text-green-600">
+                    <p className="text-xs font-semibold text-green-600">
                       {isGroup
                         ? `${familyMembers.length} family members`
                         : `${
@@ -1039,12 +1035,27 @@ export default function ChatPage() {
                           } • Family`}
                     </p>
                   </div>
+
+                  <Link
+                    href={chatPath}
+                    onClick={() => setSelectedPerson(null)}
+                    aria-label="Open Chat"
+                    className="group flex shrink-0 items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3.5 py-2.5 shadow-sm transition hover:border-gray-300 hover:shadow-md active:scale-95"
+                  >
+                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-lg transition group-hover:bg-gray-900 group-hover:text-white">
+                      💬
+                    </span>
+
+                    <span className="text-xs font-black text-gray-900">
+                      Chat
+                    </span>
+                  </Link>
                 </div>
               </div>
 
               {/* MESSAGES */}
 
-              <div className="flex-1 overflow-y-auto px-4 py-5 pb-24">
+              <div className="flex-1 overflow-y-auto bg-gradient-to-br from-rose-50/40 via-white to-orange-50/30 px-4 py-5 pb-24">
                 {loadingMessages &&
                 !isGroup ? (
                   <div className="flex h-full items-center justify-center">
@@ -1105,7 +1116,7 @@ export default function ChatPage() {
               {/* SNAP PREVIEW */}
 
               {snapPreview && (
-                <div className="border-t bg-gray-50 px-3 py-3">
+                <div className="border-t border-rose-100 bg-gradient-to-br from-rose-50/70 to-orange-50/70 px-3 py-3">
                   <div className="mx-auto flex max-w-3xl items-center gap-3">
 
                     <img
@@ -1133,7 +1144,7 @@ export default function ChatPage() {
                               e.target.value
                             )
                           }
-                          className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs"
+                          className="rounded-xl border border-white bg-white/90 px-2 py-1.5 text-xs outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-100"
                         >
                           <option value="1">
                             Expires in 1 hour
@@ -1161,7 +1172,7 @@ export default function ChatPage() {
                           null
                         )
                       }
-                      className="rounded-full px-3 py-2 text-sm text-gray-500 hover:bg-gray-200"
+                      className="rounded-xl px-3 py-2 text-sm text-gray-500 hover:bg-white"
                     >
                       Cancel
                     </button>
@@ -1174,7 +1185,7 @@ export default function ChatPage() {
                       disabled={
                         sendingSnap
                       }
-                      className="rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                      className="rounded-xl bg-rose-500 px-4 py-2 text-sm font-black text-white shadow-sm shadow-rose-200 transition hover:bg-rose-600 disabled:opacity-50"
                     >
                       {sendingSnap
                         ? "..."
@@ -1190,12 +1201,12 @@ export default function ChatPage() {
                 onSubmit={
                   sendCurrentMessage
                 }
-                className="border-t bg-white p-3"
+                className="border-t border-rose-100 bg-white p-4"
               >
                 <div className="mx-auto flex max-w-3xl items-center gap-2">
 
                   <label
-                    className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-300 bg-white text-lg hover:border-blue-300 hover:bg-blue-50"
+                    className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-2xl border border-rose-100 bg-rose-50 text-lg hover:border-rose-300 hover:bg-rose-100"
                     title="Send Snap"
                   >
                     📸
@@ -1232,7 +1243,7 @@ export default function ChatPage() {
                     disabled={
                       sending
                     }
-                    className="min-w-0 flex-1 rounded-full border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="min-w-0 flex-1 rounded-2xl border border-rose-100 bg-rose-50/40 px-4 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-500 focus:border-rose-300 focus:bg-white focus:ring-4 focus:ring-rose-100"
                   />
 
                   <button
@@ -1241,7 +1252,7 @@ export default function ChatPage() {
                       sending ||
                       !message.trim()
                     }
-                    className="rounded-full bg-blue-600 px-5 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-2xl bg-rose-500 px-5 py-3 text-sm font-black text-white shadow-sm shadow-rose-200 transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {sending
                       ? "..."
