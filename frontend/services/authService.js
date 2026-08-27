@@ -10,7 +10,3 @@ export const registerUser = async (data) => {
   return response.data;
 };
 
-export const getConnectionCode = async () => {
-  const response = await api.get("/parents/connection-code");
-  return response.data;
-};
