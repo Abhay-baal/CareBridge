@@ -1,4 +1,5 @@
 const express = require("express");
+
 const router = express.Router();
 
 const {
@@ -13,12 +14,48 @@ const {
   authorize,
 } = require("../middleware/authMiddleware");
 
-router.post("/", authenticate, authorize("parent"), createCarePlan);
+// ------------------------------------------------------------
+// Create
+// Parent -> Child
+// ------------------------------------------------------------
+router.post(
+  "/",
+  authenticate,
+  authorize("parent"),
+  createCarePlan
+);
 
-router.get("/", authenticate, authorize("parent"), getCarePlans);
+// ------------------------------------------------------------
+// Family-wide Care feed
+// Parent + Child
+// ------------------------------------------------------------
+router.get(
+  "/",
+  authenticate,
+  authorize("parent", "child"),
+  getCarePlans
+);
 
-router.put("/:id", authenticate, authorize("parent"), updateCarePlan);
+// ------------------------------------------------------------
+// Update
+// Parent + Child
+// ------------------------------------------------------------
+router.put(
+  "/:id",
+  authenticate,
+  authorize("parent", "child"),
+  updateCarePlan
+);
 
-router.delete("/:id", authenticate, authorize("parent"), deleteCarePlan);
+// ------------------------------------------------------------
+// Delete
+// Creator only is enforced by controller.
+// ------------------------------------------------------------
+router.delete(
+  "/:id",
+  authenticate,
+  authorize("parent", "child"),
+  deleteCarePlan
+);
 
 module.exports = router;
