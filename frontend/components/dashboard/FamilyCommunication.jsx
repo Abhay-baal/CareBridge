@@ -565,29 +565,32 @@ export default function FamilyCommunication() {
       {/* =====================================================
           FAMILY MESSAGE STREAK
       ====================================================== */}
-      <div className="relative overflow-hidden rounded-3xl border bg-white p-6 text-center shadow-sm">
+      <div className="relative overflow-hidden rounded-3xl border border-rose-100 bg-gradient-to-br from-rose-50 via-white to-amber-50 p-6 text-center shadow-[0_12px_30px_rgba(251,113,133,0.10)]">
 
-        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-100 blur-2xl" />
+        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-amber-100/70 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-12 -left-8 h-28 w-28 rounded-full bg-rose-100/70 blur-2xl" />
 
         <div className="relative">
           <div className="flex items-center justify-between">
-            <div className="text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
+            <div className="text-xs font-bold uppercase tracking-[0.12em] text-rose-500">
               🔥 Family Streak
             </div>
 
-            <div className="text-[11px] font-semibold text-gray-400">
+            <div className="rounded-full border border-rose-100 bg-white/70 px-2.5 py-1 text-[11px] font-semibold text-rose-400">
               Keep it alive ❤️
             </div>
           </div>
 
           <div className="mt-3 flex items-center justify-center gap-3">
-            <span className="text-3xl">🔥</span>
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-100 to-rose-100 text-3xl shadow-sm">
+              🔥
+            </span>
 
-            <span className="text-6xl font-black leading-none text-gray-900">
+            <span className="text-6xl font-black leading-none text-rose-950">
               {streak.currentStreak}
             </span>
 
-            <span className="text-left text-[10px] font-bold uppercase leading-tight text-gray-500">
+            <span className="text-left text-[10px] font-bold uppercase leading-tight tracking-[0.08em] text-rose-400">
               {streak.currentStreak === 1
                 ? "Day"
                 : "Days"}
@@ -596,53 +599,44 @@ export default function FamilyCommunication() {
             </span>
           </div>
 
-          <p className="mt-2 text-xs font-medium text-gray-500">
-            Every family message keeps the connection alive.
-          </p>
-
-          <div className="mt-3 flex items-center justify-center gap-5 text-[11px]">
-            <div>
-              <p className="font-bold text-gray-900">
-                {streak.currentStreak}
-              </p>
-              <p className="text-gray-500">
-                Current
-              </p>
-            </div>
-
-            <div className="h-5 w-px bg-gray-200" />
-
-            <div>
-              <p className="font-bold text-gray-900">
-                {streak.longestStreak}
-              </p>
-              <p className="text-gray-500">
-                Best
-              </p>
-            </div>
-          </div>
         </div>
       </div>
 
       {/* =====================================================
           CURRENT FAMILY MESSAGE
       ====================================================== */}
-      <div className="rounded-2xl border bg-white p-4 shadow-sm">
+      <div className="overflow-hidden rounded-[28px] border border-rose-100 bg-white shadow-[0_14px_32px_rgba(244,114,182,0.08)]">
 
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-black text-gray-900">
-              💌 Family Message
-            </h2>
-
-            <p className="mt-0.5 text-xs text-gray-500">
-              Share something with your family.
-            </p>
+        <div className="border-b border-rose-100 bg-gradient-to-r from-rose-50 via-pink-50 to-orange-50 px-5 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/80 text-2xl shadow-sm">
+              💌
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-rose-500">
+                Stay connected
+              </p>
+              <h2 className="mt-0.5 text-xl font-black tracking-tight text-gray-900">
+              Family Message
+              </h2>
+            </div>
           </div>
         </div>
 
-        {messages.length > 0 ? (
-          <div className="mt-3 space-y-2">
+        <div className="p-5">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-gray-400">
+              Streak messages
+            </p>
+            {messages.length > 0 && (
+              <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-bold text-rose-500">
+                {messages.length} {messages.length === 1 ? "message" : "messages"}
+              </span>
+            )}
+          </div>
+
+          {messages.length > 0 ? (
+          <div className="mt-3 space-y-3">
             {messages.map((item) => {
               const sender = item.sender;
               const senderId = getUserId(sender);
@@ -654,14 +648,13 @@ export default function FamilyCommunication() {
               return (
                 <div
                   key={item._id}
-                  className="rounded-xl border border-gray-200 bg-gray-50 p-3"
+                  className={`flex gap-3 ${isMine ? "flex-row-reverse" : ""}`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-xl shadow-sm">
-                      {getRoleEmoji(sender?.role)}
-                    </div>
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-100 to-orange-100 text-xl shadow-sm">
+                    {getRoleEmoji(sender?.role)}
+                  </div>
 
-                    <div>
+                  <div className={`min-w-0 max-w-[85%] ${isMine ? "text-right" : ""}`}>
                       <p className="text-base font-bold text-gray-900">
                         {isMine
                           ? "You"
@@ -676,51 +669,33 @@ export default function FamilyCommunication() {
                             ).toLocaleString()
                           : ""}
                       </p>
+
+                    <div className={`mt-2 rounded-2xl p-4 shadow-sm ${isMine ? "rounded-tr-sm bg-rose-100" : "rounded-tl-sm bg-gray-50"}`}>
+                      <p className="whitespace-pre-wrap break-words text-base font-medium leading-6 text-gray-900">
+                        {item.message}
+                      </p>
                     </div>
                   </div>
-
-                  <div className="mt-3 rounded-xl bg-white p-3 shadow-sm">
-                    <p className="whitespace-pre-wrap break-words text-sm font-medium leading-5 text-gray-900">
-                      {item.message}
-                    </p>
-                  </div>
-
-                  {Array.isArray(item.recipients) &&
-                    item.recipients.length > 0 && (
-                      <p className="mt-3 text-xs font-medium text-gray-500">
-                        Sent to{" "}
-                        {item.recipients
-                          .map(
-                            (recipient) =>
-                              getUserId(recipient) ===
-                              currentUserId
-                                ? "You"
-                                : recipient.fullName
-                          )
-                          .join(", ")}
-                      </p>
-                    )}
                 </div>
               );
             })}
           </div>
         ) : (
-          <div className="mt-5 rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+          <div className="mt-4 rounded-2xl border border-dashed border-rose-200 bg-rose-50/50 p-7 text-center">
             <div className="text-4xl">💌</div>
 
             <p className="mt-3 text-base font-bold text-gray-900">
               No family message yet
             </p>
 
-            <p className="mt-1 text-sm text-gray-600">
-              Send the first message and start
-              your family streak.
+            <p className="mt-1 text-xs font-medium text-gray-500">
+              Be the first to send a little love.
             </p>
           </div>
         )}
 
         {/* SMALL MESSAGE INPUT */}
-        <div className="mt-3">
+        <div className="mt-4 rounded-2xl border border-rose-100 bg-gradient-to-br from-rose-50/70 to-orange-50/70 p-3">
 
           <textarea
             value={message}
@@ -730,21 +705,11 @@ export default function FamilyCommunication() {
             placeholder="Write something to your family..."
             maxLength={2000}
             rows={2}
-            className="w-full resize-none rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-900 placeholder:text-gray-600 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-100"
+            className="mt-2 w-full resize-none rounded-xl border border-white bg-white/90 px-3 py-2 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition focus:border-rose-300 focus:ring-4 focus:ring-rose-100"
           />
 
-          <div className="mt-2 flex items-center justify-between">
-            <span className="text-[11px] font-medium text-gray-500">
-              {message.length}/2000
-            </span>
-
-            <span className="text-[11px] font-medium text-gray-500">
-              New message replaces the old one
-            </span>
-          </div>
-
-          <div className="mt-3">
-            <label className="text-xs font-bold text-gray-700">
+          <div className="mt-2">
+            <label className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
               Send to
             </label>
 
@@ -760,7 +725,7 @@ export default function FamilyCommunication() {
                   setSelectedRecipients([]);
                 }
               }}
-              className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-900 outline-none focus:border-gray-900"
+              className="mt-1 w-full rounded-xl border border-white bg-white/90 px-3 py-2 text-sm font-semibold text-gray-900 outline-none focus:border-rose-300 focus:ring-4 focus:ring-rose-100"
             >
               <option value="everyone">
                 👨‍👩‍👧 Everyone
@@ -773,7 +738,7 @@ export default function FamilyCommunication() {
           </div>
 
           {recipientMode === "specific" && (
-            <div className="mt-3 space-y-2 rounded-2xl border border-gray-200 bg-gray-50 p-3">
+            <div className="mt-3 space-y-2 rounded-2xl border border-white bg-white/50 p-3">
               {otherMembers.length === 0 ? (
                 <p className="text-sm font-medium text-gray-600">
                   No other family members available.
@@ -785,7 +750,7 @@ export default function FamilyCommunication() {
                   return (
                     <label
                       key={id}
-                      className="flex cursor-pointer items-center gap-3 rounded-xl bg-white p-3 text-sm hover:bg-gray-50"
+                      className="flex cursor-pointer items-center gap-3 rounded-xl bg-white/80 p-3 text-sm transition hover:bg-white"
                     >
                       <input
                         type="checkbox"
@@ -798,7 +763,7 @@ export default function FamilyCommunication() {
                             setSelectedRecipients
                           )
                         }
-                        className="h-4 w-4"
+                        className="h-4 w-4 accent-rose-400"
                       />
 
                       <span className="text-lg">
@@ -824,45 +789,37 @@ export default function FamilyCommunication() {
               !message.trim() ||
               otherMembers.length === 0
             }
-            className="mt-4 w-full rounded-2xl bg-gray-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-3 w-full rounded-xl bg-rose-500 px-4 py-2.5 text-sm font-black text-white shadow-sm shadow-rose-200 transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {sending
               ? "Sending..."
               : "Send Family Message 💌"}
           </button>
         </div>
+        </div>
       </div>
 
       {/* =====================================================
           FAMILY SNAPS
       ====================================================== */}
-      <div className="rounded-2xl border bg-white p-4 shadow-sm">
+      <div className="rounded-[28px] border border-rose-100 bg-white p-4 shadow-[0_14px_32px_rgba(244,114,182,0.07)]">
 
-        <div>
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-100 to-orange-100 text-xl">
+            📸
+          </span>
           <h2 className="text-xl font-black text-gray-900">
-            📸 Family Snaps
+            Family Snaps
           </h2>
-
-          <p className="mt-0.5 text-xs font-medium text-gray-500">
-            Photos disappear after 24 hours.
-          </p>
         </div>
 
         {/* CREATE SNAP */}
-        <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
+        <div className="mt-3 rounded-2xl border border-rose-100 bg-gradient-to-br from-rose-50/70 to-orange-50/70 p-3">
 
           <div className="flex items-center gap-3">
-            <span className="text-2xl">
-              📸
-            </span>
-
             <div>
               <p className="text-sm font-bold text-gray-900">
-                Share a Snap
-              </p>
-
-              <p className="text-xs font-medium text-gray-600">
-                Add a location only if you want
+                Add a snap
               </p>
             </div>
           </div>
@@ -906,10 +863,6 @@ export default function FamilyCommunication() {
                   <div>
                     <p className="text-sm font-bold text-gray-900">
                       📍 Add location?
-                    </p>
-
-                    <p className="mt-1 text-[11px] font-medium text-gray-500">
-                      Your choice. The app never tracks you.
                     </p>
                   </div>
 
@@ -1093,9 +1046,6 @@ export default function FamilyCommunication() {
                     )}
                   </div>
 
-                  <p className="mt-2 text-[11px] font-medium text-gray-500">
-                    Select nobody to share with everyone.
-                  </p>
                 </div>
               )}
 
@@ -1156,7 +1106,7 @@ export default function FamilyCommunication() {
                   {getRoleEmoji(
                     latestMySnap.sender?.role
                   )}{" "}
-                  MY SNAP
+                  
                 </p>
 
                 <p className="mt-0.5 text-[11px] font-medium text-gray-400">
@@ -1231,8 +1181,7 @@ export default function FamilyCommunication() {
                     snap.sender?.role
                   )}{" "}
                   {snap.sender?.fullName ||
-                    "Family Member"}{" "}
-                  SNAP
+                    "Family Member"}
                 </p>
 
                 <p className="mt-0.5 text-[11px] font-medium text-gray-400">
