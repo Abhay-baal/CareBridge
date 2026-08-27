@@ -2,22 +2,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
 
 import WelcomeHeader from "@/components/child/WelcomeHeader";
-import ParentSummaryCard from "@/components/child/ParentSummaryCard";
-import ProgressCard from "@/components/child/ProgressCard";
-import AppointmentCard from "@/components/child/AppointmentCard";
-import TodayTasks from "@/components/child/TodayTasks";
-import StatsGrid from "@/components/child/StatsGrid";
 import LoadingState from "@/components/ui/LoadingState";
-import ParentSelector from "@/components/child/ParentSelector";
 import FamilyCommunication from "@/components/dashboard/FamilyCommunication";
 
-import {
-  getChildDashboard,
-  updateChildCarePlan,
-} from "@/services/childService";
+import { getChildDashboard } from "@/services/childService";
 
 export default function ChildDashboard() {
   const [data, setData] = useState(null);
@@ -47,34 +37,6 @@ export default function ChildDashboard() {
   useEffect(() => {
     loadDashboard();
   }, []);
-
-  const handleToggleTask = async (task) => {
-    try {
-      const newStatus =
-        task.status === "completed"
-          ? "pending"
-          : "completed";
-
-      await updateChildCarePlan(
-        task._id,
-        newStatus
-      );
-
-      toast.success(
-        newStatus === "completed"
-          ? "Task completed successfully."
-          : "Task marked as pending."
-      );
-
-      await loadDashboard();
-    } catch (err) {
-      console.error("Task update error:", err);
-
-      toast.error(
-        "Something went wrong. Please try again."
-      );
-    }
-  };
 
   if (loading) {
     return (
@@ -108,15 +70,6 @@ export default function ChildDashboard() {
   }
 
   const parent = data?.parent;
-  const tasks = data?.carePlans || [];
-  const appointments = data?.appointments || [];
-  const stats = data?.stats || {};
-
-  const upcomingAppointment =
-    appointments.find(
-      (appointment) =>
-        appointment.status === "upcoming"
-    ) || appointments[0];
 
   return (
     <div className="mx-auto max-w-md space-y-4 p-4">
@@ -126,39 +79,6 @@ export default function ChildDashboard() {
       />
 
       <FamilyCommunication />
-
-
-      <ParentSelector />
-
-      <ParentSummaryCard
-        parent={{
-          fullName: parent?.user?.fullName,
-          bloodGroup: parent?.bloodGroup,
-          healthStatus: "Good",
-        }}
-      />
-
-      <ProgressCard
-        completed={stats.completedTasks || 0}
-        total={stats.totalTasks || 0}
-      />
-
-      <AppointmentCard
-        appointment={upcomingAppointment}
-      />
-
-      <StatsGrid
-        totalTasks={stats.totalTasks || 0}
-        completedTasks={stats.completedTasks || 0}
-        appointments={stats.totalAppointments || 0}
-        reports={stats.totalReports || 0}
-      />
-
-      <TodayTasks
-        tasks={tasks}
-        onToggle={handleToggleTask}
-      />
-
 
     </div>
   );

@@ -88,7 +88,7 @@ export default function ParentSelector() {
         </div>
 
         <Link
-          href="/child/my-parents"
+          href="/family"
           className="rounded-xl bg-blue-50 px-3 py-2 text-sm font-medium text-blue-600"
         >
           Manage

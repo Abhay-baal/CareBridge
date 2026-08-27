@@ -29,6 +29,11 @@ export default function BottomNavigation() {
       icon: "❤️",
     },
     {
+      name: "Emergency",
+      href: "/emergency-contacts",
+      icon: "🚨",
+    },
+    {
       name: "Profile",
       href: "/profile",
       icon: "👤",

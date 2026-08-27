@@ -10,11 +10,6 @@ const navigation = [
     icon: "🏠",
   },
   {
-    href: "/child/my-parents",
-    label: "Parents",
-    icon: "👨‍👩‍👧",
-  },
-  {
     href: "/child/chat",
     label: "Chat",
     icon: "💬",

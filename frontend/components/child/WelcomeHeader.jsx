@@ -13,7 +13,7 @@ export default function WelcomeHeader({
 
         {showFamilyShortcut && (
           <Link
-            href="/child/my-parents"
+            href="/family"
             aria-label="Open Family"
             className="group -mt-1 flex shrink-0 items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3.5 py-2.5 shadow-sm transition hover:border-gray-300 hover:shadow-md active:scale-95"
           >

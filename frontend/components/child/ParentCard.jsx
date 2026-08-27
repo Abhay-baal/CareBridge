@@ -49,12 +49,7 @@ export default function ParentCard({
           </span>
         </div>
 
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-500">Connection Code</span>
-          <span className="font-medium text-gray-800">
-            {parent?.connectionCode || "—"}
-          </span>
-        </div>
+
       </div>
 
       <div className="mt-4 flex gap-2">

@@ -322,7 +322,7 @@ export default function RequestCarePage() {
                 </p>
 
                 <Link
-                  href="/child/my-parents"
+                  href="/family"
                   className="mt-2 inline-block text-sm font-semibold text-blue-600"
                 >
                   Manage Parents →
