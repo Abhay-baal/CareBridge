@@ -76,20 +76,41 @@ const createSOS = async (req, res) => {
       relationship: relationship._id,
       status: "ACTIVE",
       latitude:
-        typeof latitude === "number" ? latitude : null,
+        typeof latitude === "number"
+          ? latitude
+          : null,
       longitude:
-        typeof longitude === "number" ? longitude : null,
-      address: address || "",
-      message: message || "Emergency SOS triggered",
+        typeof longitude === "number"
+          ? longitude
+          : null,
+      address:
+        typeof address === "string"
+          ? address.trim()
+          : "",
+      message:
+        typeof message === "string" &&
+        message.trim()
+          ? message.trim()
+          : "Emergency SOS triggered",
     });
 
-    const populatedEvent = await EmergencyEvent.findById(
-      emergencyEvent._id
-    )
-      .populate("parent", "fullName phone email")
-      .populate("child", "fullName phone email")
-      .populate("triggeredBy", "fullName role")
-      .populate("relationship");
+    const populatedEvent =
+      await EmergencyEvent.findById(
+        emergencyEvent._id
+      )
+        .populate(
+          "parent",
+          "fullName phone email"
+        )
+        .populate(
+          "child",
+          "fullName phone email"
+        )
+        .populate(
+          "triggeredBy",
+          "fullName role"
+        )
+        .populate("relationship");
 
     return res.status(201).json({
       success: true,
@@ -106,54 +127,85 @@ const createSOS = async (req, res) => {
   }
 };
 
-const getEmergencyHistory = async (req, res) => {
+const getEmergencyHistory = async (
+  req,
+  res
+) => {
   try {
-    const relationship = await getActiveRelationship(req.user.id);
+    const relationship =
+      await getActiveRelationship(
+        req.user.id
+      );
 
     if (!relationship) {
       return res.status(403).json({
         success: false,
-        message: "No active parent-child relationship found",
+        message:
+          "No active parent-child relationship found",
       });
     }
 
-    const events = await EmergencyEvent.find({
-      relationship: relationship._id,
-    })
-      .populate("parent", "fullName phone email")
-      .populate("child", "fullName phone email")
-      .populate("triggeredBy", "fullName role")
-      .sort({ createdAt: -1 });
+    const events =
+      await EmergencyEvent.find({
+        relationship: relationship._id,
+      })
+        .populate(
+          "parent",
+          "fullName phone email"
+        )
+        .populate(
+          "child",
+          "fullName phone email"
+        )
+        .populate(
+          "triggeredBy",
+          "fullName role"
+        )
+        .sort({
+          createdAt: -1,
+        });
 
     return res.status(200).json({
       success: true,
       data: events,
     });
   } catch (error) {
-    console.error("Emergency history error:", error);
+    console.error(
+      "Emergency history error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Unable to fetch emergency history",
+      message:
+        "Unable to fetch emergency history",
     });
   }
 };
 
-const acknowledgeEmergency = async (req, res) => {
+const acknowledgeEmergency = async (
+  req,
+  res
+) => {
   try {
-    const relationship = await getActiveRelationship(req.user.id);
+    const relationship =
+      await getActiveRelationship(
+        req.user.id
+      );
 
     if (!relationship) {
       return res.status(403).json({
         success: false,
-        message: "No active parent-child relationship found",
+        message:
+          "No active parent-child relationship found",
       });
     }
 
-    const emergencyEvent = await EmergencyEvent.findOne({
-      _id: req.params.id,
-      relationship: relationship._id,
-    });
+    const emergencyEvent =
+      await EmergencyEvent.findOne({
+        _id: req.params.id,
+        relationship: relationship._id,
+      });
 
     if (!emergencyEvent) {
       return res.status(404).json({
@@ -162,23 +214,38 @@ const acknowledgeEmergency = async (req, res) => {
       });
     }
 
-    if (emergencyEvent.status === "RESOLVED") {
+    if (
+      emergencyEvent.status ===
+      "RESOLVED"
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Resolved emergency cannot be acknowledged",
+        message:
+          "Resolved emergency cannot be acknowledged",
       });
     }
 
-    emergencyEvent.status = "ACKNOWLEDGED";
+    emergencyEvent.status =
+      "ACKNOWLEDGED";
 
     await emergencyEvent.save();
 
-    const populatedEvent = await EmergencyEvent.findById(
-      emergencyEvent._id
-    )
-      .populate("parent", "fullName phone email")
-      .populate("child", "fullName phone email")
-      .populate("triggeredBy", "fullName role");
+    const populatedEvent =
+      await EmergencyEvent.findById(
+        emergencyEvent._id
+      )
+        .populate(
+          "parent",
+          "fullName phone email"
+        )
+        .populate(
+          "child",
+          "fullName phone email"
+        )
+        .populate(
+          "triggeredBy",
+          "fullName role"
+        );
 
     return res.status(200).json({
       success: true,
@@ -186,30 +253,42 @@ const acknowledgeEmergency = async (req, res) => {
       data: populatedEvent,
     });
   } catch (error) {
-    console.error("Acknowledge emergency error:", error);
+    console.error(
+      "Acknowledge emergency error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Unable to acknowledge emergency",
+      message:
+        "Unable to acknowledge emergency",
     });
   }
 };
 
-const resolveEmergency = async (req, res) => {
+const resolveEmergency = async (
+  req,
+  res
+) => {
   try {
-    const relationship = await getActiveRelationship(req.user.id);
+    const relationship =
+      await getActiveRelationship(
+        req.user.id
+      );
 
     if (!relationship) {
       return res.status(403).json({
         success: false,
-        message: "No active parent-child relationship found",
+        message:
+          "No active parent-child relationship found",
       });
     }
 
-    const emergencyEvent = await EmergencyEvent.findOne({
-      _id: req.params.id,
-      relationship: relationship._id,
-    });
+    const emergencyEvent =
+      await EmergencyEvent.findOne({
+        _id: req.params.id,
+        relationship: relationship._id,
+      });
 
     if (!emergencyEvent) {
       return res.status(404).json({
@@ -218,24 +297,39 @@ const resolveEmergency = async (req, res) => {
       });
     }
 
-    if (emergencyEvent.status === "RESOLVED") {
+    if (
+      emergencyEvent.status ===
+      "RESOLVED"
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Emergency is already resolved",
+        message:
+          "Emergency is already resolved",
       });
     }
 
     emergencyEvent.status = "RESOLVED";
-    emergencyEvent.resolvedAt = new Date();
+    emergencyEvent.resolvedAt =
+      new Date();
 
     await emergencyEvent.save();
 
-    const populatedEvent = await EmergencyEvent.findById(
-      emergencyEvent._id
-    )
-      .populate("parent", "fullName phone email")
-      .populate("child", "fullName phone email")
-      .populate("triggeredBy", "fullName role");
+    const populatedEvent =
+      await EmergencyEvent.findById(
+        emergencyEvent._id
+      )
+        .populate(
+          "parent",
+          "fullName phone email"
+        )
+        .populate(
+          "child",
+          "fullName phone email"
+        )
+        .populate(
+          "triggeredBy",
+          "fullName role"
+        );
 
     return res.status(200).json({
       success: true,
@@ -243,11 +337,15 @@ const resolveEmergency = async (req, res) => {
       data: populatedEvent,
     });
   } catch (error) {
-    console.error("Resolve emergency error:", error);
+    console.error(
+      "Resolve emergency error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Unable to resolve emergency",
+      message:
+        "Unable to resolve emergency",
     });
   }
 };
