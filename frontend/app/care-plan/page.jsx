@@ -9,15 +9,15 @@ import {
   getCarePlans,
   createCarePlan,
   updateCarePlan,
+  deleteCarePlan,
 } from "@/services/carePlanService";
 
 import {
   getParentChildRelationships,
 } from "@/services/parentChildService";
+
 import {
   createChildCarePlan,
-  getChildDashboard,
-  updateChildCarePlan,
 } from "@/services/childService";
 
 const WALK_LEVELS = [
@@ -33,21 +33,21 @@ const WALK_LEVELS = [
     label: "Easy",
     duration: 5,
     display: "5 min",
-    emoji: "🟢",
+    emoji: "🙂",
   },
   {
     id: "medium",
     label: "Medium",
     duration: 10,
     display: "10 min",
-    emoji: "🔵",
+    emoji: "🚶",
   },
   {
     id: "hard",
     label: "Hard",
     duration: 15,
     display: "15 min",
-    emoji: "🟠",
+    emoji: "💪",
   },
   {
     id: "extreme",
@@ -60,283 +60,630 @@ const WALK_LEVELS = [
 
 function getDueDate(value) {
   const now = new Date();
+
   const [day, time] = value.split("|");
-  const [hours, minutes] = time.split(":").map(Number);
+  const [hours, minutes] = time
+    .split(":")
+    .map(Number);
+
   const dueDate = new Date(now);
 
   if (day === "tomorrow") {
-    dueDate.setDate(dueDate.getDate() + 1);
+    dueDate.setDate(
+      dueDate.getDate() + 1
+    );
   }
 
-  dueDate.setHours(hours, minutes, 0, 0);
+  dueDate.setHours(
+    hours,
+    minutes,
+    0,
+    0
+  );
+
   return dueDate.toISOString();
 }
 
-function normalizeCarePlan(plan) {
+function getUserId(value) {
+  if (!value) return null;
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  return (
+    value._id ||
+    value.id ||
+    null
+  )?.toString();
+}
+
+function getUserName(value) {
+  if (!value) return "Family";
+
+  if (typeof value === "string") {
+    return "Family";
+  }
+
+  return (
+    value.fullName ||
+    value.name ||
+    "Family"
+  );
+}
+
+function normalizeCarePlan(
+  plan,
+  currentUserId
+) {
   const isWalk =
     plan.careType === "walk" ||
-    plan.description?.startsWith("Care activity:");
-  const childName = plan.child?.fullName;
+    plan.description?.startsWith(
+      "Care activity:"
+    );
+
+  const senderId =
+    getUserId(plan.createdBy);
+
+  const childId =
+    getUserId(plan.child);
+
+  const parentUserId =
+    getUserId(plan.parent?.user);
+
+  const isGivenByMe =
+    senderId === currentUserId;
+
+  let recipient;
+
+  if (senderId === childId) {
+    recipient = {
+      id: parentUserId,
+      name: getUserName(
+        plan.parent?.user
+      ),
+      role: "Parent",
+      emoji: "👨‍👩‍👧",
+    };
+  } else {
+    recipient = {
+      id: childId,
+      name: getUserName(plan.child),
+      role: "Child",
+      emoji: "👦",
+    };
+  }
+
+  const sender =
+    senderId === childId
+      ? {
+          id: childId,
+          name: getUserName(
+            plan.child
+          ),
+          role: "Child",
+          emoji: "👦",
+        }
+      : {
+          id: parentUserId,
+          name: getUserName(
+            plan.parent?.user
+          ),
+          role: "Parent",
+          emoji: "👨",
+        };
 
   return {
     ...plan,
-    id: plan._id || plan.id,
-    type: isWalk ? "walk" : "task",
-    duration: plan.walkDuration,
-    level: plan.walkLevel,
-    levelEmoji: WALK_LEVELS.find(
-      (level) => level.id === plan.walkLevel
-    )?.emoji,
+
+    id:
+      plan._id ||
+      plan.id,
+
+    type: isWalk
+      ? "walk"
+      : "task",
+
+    duration:
+      plan.walkDuration,
+
+    level:
+      WALK_LEVELS.find(
+        (level) =>
+          level.id === plan.walkLevel
+      )?.label ||
+      plan.walkLevel,
+
+    levelEmoji:
+      WALK_LEVELS.find(
+        (level) =>
+          level.id === plan.walkLevel
+      )?.emoji,
+
+    senderId,
+
+    sender,
+
+    recipient,
+
+    isGivenByMe,
+
+    isGivenToMe:
+      recipient.id === currentUserId,
+
     time: plan.dueDate
-      ? new Date(plan.dueDate).toLocaleString([], {
+      ? new Date(
+          plan.dueDate
+        ).toLocaleString([], {
           dateStyle: "medium",
           timeStyle: "short",
         })
       : "No due date",
-    recipients: childName ? [childName] : [],
-    from: "You",
   };
 }
 
 function formatTime(seconds) {
-  const minutes = Math.floor(seconds / 60)
+  const minutes = Math.floor(
+    seconds / 60
+  )
     .toString()
     .padStart(2, "0");
 
-  const remaining = (seconds % 60).toString().padStart(2, "0");
+  const remaining = (
+    seconds % 60
+  )
+    .toString()
+    .padStart(2, "0");
 
   return `${minutes}:${remaining}`;
 }
 
-function Icon({ children, className = "" }) {
+const TWENTY_FOUR_HOURS_MS =
+  24 * 60 * 60 * 1000;
+
+function isWithinLast24Hours(value) {
+  if (!value) return true;
+
+  const timestamp = new Date(
+    value
+  ).getTime();
+
+  if (Number.isNaN(timestamp)) {
+    return true;
+  }
+
   return (
-    <span
-      aria-hidden="true"
-      className={`inline-flex items-center justify-center ${className}`}
-    >
-      {children}
-    </span>
+    Date.now() - timestamp <=
+    TWENTY_FOUR_HOURS_MS
+  );
+}
+
+function getTaskAgeTimestamp(task) {
+  if (!task) return null;
+
+  return (
+    task.status === "completed"
+      ? task.updatedAt ||
+        task.createdAt ||
+        task.dueDate
+      : task.createdAt ||
+        task.dueDate
   );
 }
 
 export default function CarePlanPage() {
   const pathname = usePathname();
-  const isChild = pathname?.startsWith("/child");
-  const PageLayout = isChild ? ChildCareLayout : AppLayout;
-  const [profile, setProfile] = useState(
-    isChild ? "child" : "parent"
-  );
-  const [screen, setScreen] = useState("home");
 
-  const [givenTasks, setGivenTasks] = useState([]);
+  const isChild =
+    pathname?.startsWith(
+      "/child"
+    );
 
-  const [relationships, setRelationships] = useState([]);
-  const [loadingRelationships, setLoadingRelationships] =
-    useState(true);
+  const PageLayout = isChild
+    ? ChildCareLayout
+    : AppLayout;
 
-  const [taskTitle, setTaskTitle] = useState("");
-  const [selectedRecipients, setSelectedRecipients] = useState([]);
-  const [taskTime, setTaskTime] = useState("today|19:00");
+  const [screen, setScreen] =
+    useState("home");
 
-  const [selectedWalkLevel, setSelectedWalkLevel] = useState("medium");
+  const [activeTab, setActiveTab] =
+    useState("all");
 
-  const [timerSeconds, setTimerSeconds] = useState(0);
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [timerFinished, setTimerFinished] = useState(false);
-  const [activeWalk, setActiveWalk] = useState(null);
+  const [currentUserId] = useState(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
 
-  const recipients = useMemo(() => {
-    return relationships
-      .filter(
-        (relationship) =>
-          relationship?.parent && relationship?.child
-      )
-      .map((relationship) => ({
-        id:
-          profile === "parent"
-            ? relationship.child._id
-            : relationship.parent._id,
-        relationshipId: relationship._id,
-        name:
-          profile === "parent"
-            ? relationship.child.fullName
-            : relationship.parent.fullName,
-        email:
-          profile === "parent"
-            ? relationship.child.email
-            : relationship.parent.email,
-        emoji: profile === "parent" ? "👦" : "👨‍👩‍👧",
-        role: profile === "parent" ? "Child" : "Parent",
-      }));
-  }, [relationships, profile]);
-
-  const loadRealFamily = async () => {
     try {
-      setLoadingRelationships(true);
+      const token =
+        localStorage.getItem("token") ||
+        localStorage.getItem("accessToken");
 
-      const response = await getParentChildRelationships();
+      if (!token) return null;
 
-      const realRelationships = response?.data || [];
+      const payload = JSON.parse(
+        atob(token.split(".")[1])
+      );
 
-      setRelationships(realRelationships);
-
-      return realRelationships;
+      return (
+        payload.id ||
+        payload.userId ||
+        payload._id ||
+        payload.sub ||
+        ""
+      ).toString();
     } catch (error) {
       console.error(
-        "Failed to load family relationships:",
+        "Unable to read current user:",
         error
       );
 
-      toast.error(
-        error.response?.data?.message ||
-          "Unable to load connected family members."
-      );
-
-      setRelationships([]);
-      return [];
-    } finally {
-      setLoadingRelationships(false);
+      return null;
     }
-  };
+  });
 
-  const loadRealCarePlans = async () => {
-    try {
-      const response = isChild
-        ? await getChildDashboard()
-        : await getCarePlans();
+  const [givenTasks, setGivenTasks] =
+    useState([]);
 
-      const realPlans = isChild
-        ? response?.data?.carePlans || []
-        : response?.data || [];
+  const [relationships, setRelationships] =
+    useState([]);
 
-      const normalizedPlans = realPlans.map(normalizeCarePlan);
+  const [
+    loadingRelationships,
+    setLoadingRelationships,
+  ] = useState(true);
 
-      setGivenTasks(normalizedPlans);
+  const [taskTitle, setTaskTitle] =
+    useState("");
 
-      return realPlans;
-    } catch (error) {
-      console.error(
-        "Failed to load care plans:",
-        error
-      );
+  const [
+    selectedRecipients,
+    setSelectedRecipients,
+  ] = useState([]);
 
-      toast.error(
-        error.response?.data?.message ||
-          "Unable to load care plans."
-      );
+  const [taskTime, setTaskTime] =
+    useState("today|19:00");
 
-      return [];
-    }
-  };
+  const [
+    selectedWalkLevel,
+    setSelectedWalkLevel,
+  ] = useState("medium");
 
+  const [
+    timerSeconds,
+    setTimerSeconds,
+  ] = useState(0);
+
+  const [
+    timerRunning,
+    setTimerRunning,
+  ] = useState(false);
+
+  const [
+    timerFinished,
+    setTimerFinished,
+  ] = useState(false);
+
+  const [
+    activeWalk,
+    setActiveWalk,
+  ] = useState(null);
+
+  // ----------------------------------------------------------
+  // Load relationships + FAMILY-WIDE care plans.
+  // ----------------------------------------------------------
   useEffect(() => {
     let cancelled = false;
 
     const load = async () => {
       try {
-        setLoadingRelationships(true);
+        setLoadingRelationships(
+          true
+        );
 
-        if (isChild) {
-          const response = await getChildDashboard();
-
-          if (cancelled) return;
-
-          const parent = response?.data?.parent?.user ||
-            response?.data?.parent;
-
-          setRelationships(
-            parent
-              ? [{ _id: parent._id, parent, child: { _id: "self" } }]
-              : []
-          );
-          setGivenTasks(
-            (response?.data?.carePlans || []).map(normalizeCarePlan)
-          );
-          return;
-        }
-
-        const [familyResponse, carePlanResponse] = await Promise.all([
+        const [
+          relationshipResponse,
+          carePlanResponse,
+        ] = await Promise.all([
           getParentChildRelationships(),
           getCarePlans(),
         ]);
 
         if (cancelled) return;
 
-        setRelationships(familyResponse?.data || []);
-        const normalizedPlans = (carePlanResponse?.data || []).map(
-          normalizeCarePlan
+        setRelationships(
+          relationshipResponse?.data ||
+            []
         );
 
-        setGivenTasks(normalizedPlans);
+        const rawPlans =
+          carePlanResponse?.data ||
+          [];
+
+        const normalized =
+          rawPlans.map((plan) =>
+            normalizeCarePlan(
+              plan,
+              currentUserId
+            )
+          );
+
+        setGivenTasks(
+          normalized
+        );
       } catch (error) {
         if (cancelled) return;
 
         console.error(
-          "Failed to load care plan data:",
+          "Failed to load care data:",
           error
         );
 
         toast.error(
-          error.response?.data?.message ||
-            "Unable to load care plan data."
+          error.response?.data
+            ?.message ||
+            "Unable to load care data."
         );
 
         setRelationships([]);
         setGivenTasks([]);
       } finally {
         if (!cancelled) {
-          setLoadingRelationships(false);
+          setLoadingRelationships(
+            false
+          );
         }
       }
     };
 
-    load();
+    if (currentUserId) {
+      load();
+    }
 
     return () => {
       cancelled = true;
     };
-  }, [profile, isChild]);
+  }, [
+    currentUserId,
+    isChild,
+  ]);
 
-  const currentWalkLevel = useMemo(
-    () =>
-      WALK_LEVELS.find(
-        (level) => level.id === selectedWalkLevel
-      ) || WALK_LEVELS[2],
-    [selectedWalkLevel]
-  );
+  const recipients = useMemo(() => {
+    return relationships
+      .filter(
+        (relationship) =>
+          relationship?.parent &&
+          relationship?.child
+      )
+      .map(
+        (relationship) => ({
+          id: isChild
+            ? relationship.parent._id
+            : relationship.child._id,
 
+          relationshipId:
+            relationship._id,
+
+          name: isChild
+            ? relationship.parent
+                .fullName
+            : relationship.child
+                .fullName,
+
+          email: isChild
+            ? relationship.parent
+                .email
+            : relationship.child
+                .email,
+
+          emoji: isChild
+            ? "👨"
+            : "👦",
+
+          role: isChild
+            ? "Parent"
+            : "Child",
+        })
+      );
+  }, [
+    relationships,
+    isChild,
+  ]);
+
+  const freshTasks = useMemo(() => {
+    return givenTasks.filter(
+      (task) =>
+        isWithinLast24Hours(
+          getTaskAgeTimestamp(task)
+        )
+    );
+  }, [givenTasks]);
+
+  const visibleTasks = useMemo(() => {
+    if (activeTab === "mine") {
+      return freshTasks.filter(
+        (task) =>
+          task.isGivenToMe
+      );
+    }
+
+    if (activeTab === "given") {
+      return freshTasks.filter(
+        (task) =>
+          task.isGivenByMe
+      );
+    }
+
+    return freshTasks;
+  }, [
+    freshTasks,
+    activeTab,
+  ]);
+
+  const completedTasksToClear =
+    useMemo(() => {
+      return visibleTasks.filter(
+        (task) =>
+          task.isGivenToMe &&
+          task.status ===
+            "completed"
+      );
+    }, [visibleTasks]);
+
+  const currentWalkLevel =
+    useMemo(
+      () =>
+        WALK_LEVELS.find(
+          (level) =>
+            level.id ===
+            selectedWalkLevel
+        ) ||
+        WALK_LEVELS[2],
+      [selectedWalkLevel]
+    );
+
+  // ----------------------------------------------------------
+  // Timer
+  // ----------------------------------------------------------
   useEffect(() => {
-    if (!timerRunning) return;
+    if (!timerRunning) {
+      return;
+    }
 
-    const timer = setInterval(() => {
-      setTimerSeconds((current) => {
-        if (current <= 1) {
-          clearInterval(timer);
-          setTimerRunning(false);
-          setTimerFinished(true);
-          return 0;
-        }
+    const timer =
+      setInterval(() => {
+        setTimerSeconds(
+          (current) => {
+            if (current <= 1) {
+              clearInterval(
+                timer
+              );
 
-        return current - 1;
-      });
-    }, 1000);
+              setTimerRunning(
+                false
+              );
 
-    return () => clearInterval(timer);
+              setTimerFinished(
+                true
+              );
+
+              return 0;
+            }
+
+            return current - 1;
+          }
+        );
+      }, 1000);
+
+    return () =>
+      clearInterval(timer);
   }, [timerRunning]);
 
-  const toggleRecipient = (id) => {
-    setSelectedRecipients((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id]
+  const reloadCare = async () => {
+    try {
+      const response =
+        await getCarePlans();
+
+      const normalized =
+        (
+          response?.data ||
+          []
+        ).map((plan) =>
+          normalizeCarePlan(
+            plan,
+            currentUserId
+          )
+        );
+
+      setGivenTasks(
+        normalized
+      );
+    } catch (error) {
+      console.error(
+        "Reload care error:",
+        error
+      );
+    }
+  };
+
+  const clearCompletedTasks = async () => {
+    const idsToClear =
+      visibleTasks
+        .filter(
+          (task) =>
+            task.isGivenToMe &&
+            task.status ===
+              "completed"
+        )
+        .map(
+          (task) =>
+            task.id ||
+            task._id
+        )
+        .filter(Boolean);
+
+    if (
+      idsToClear.length ===
+      0
+    ) {
+      return;
+    }
+
+    try {
+      await Promise.all(
+        idsToClear.map(
+          (id) =>
+            deleteCarePlan(id)
+        )
+      );
+
+      await reloadCare();
+
+      toast.success(
+        "Completed tasks cleared ✨"
+      );
+    } catch (error) {
+      console.error(
+        "Clear completed tasks error:",
+        error
+      );
+
+      toast.error(
+        error.response?.data
+          ?.message ||
+          "Unable to clear completed tasks."
+      );
+    }
+  };
+
+  const toggleRecipient = (
+    id
+  ) => {
+    setSelectedRecipients(
+      (current) =>
+        current.includes(id)
+          ? current.filter(
+              (item) =>
+                item !== id
+            )
+          : [
+              ...current,
+              id,
+            ]
     );
   };
 
   const resetComposer = () => {
     setTaskTitle("");
-    setSelectedRecipients([]);
-    setTaskTime("today|19:00");
-    setSelectedWalkLevel("medium");
+    setSelectedRecipients(
+      []
+    );
+    setTaskTime(
+      "today|19:00"
+    );
+    setSelectedWalkLevel(
+      "medium"
+    );
   };
 
   const openGiveCare = () => {
@@ -356,42 +703,67 @@ export default function CarePlanPage() {
 
   const goHome = () => {
     setTimerRunning(false);
+    setTimerFinished(false);
     setScreen("home");
   };
 
+  // ----------------------------------------------------------
+  // Parent -> Child
+  // Child -> Parent
+  // ----------------------------------------------------------
   const assignTask = async () => {
     if (
       !taskTitle.trim() ||
-      selectedRecipients.length === 0
+      selectedRecipients.length ===
+        0
     ) {
-      return;
-    }
-
-    if (!isChild && profile !== "parent") {
-      toast.error("Only parents can assign care.");
       return;
     }
 
     try {
       await Promise.all(
-        selectedRecipients.map((recipientId) =>
-          (isChild ? createChildCarePlan : createCarePlan)({
-            title: taskTitle.trim(),
-            description: "",
-            dueDate: getDueDate(taskTime),
-            ...(isChild
-              ? { parentId: recipientId }
-              : { childId: recipientId }),
-            careType: "task",
-          })
+        selectedRecipients.map(
+          (recipientId) =>
+            (
+              isChild
+                ? createChildCarePlan
+                : createCarePlan
+            )({
+              title:
+                taskTitle.trim(),
+
+              description: "",
+
+              dueDate:
+                getDueDate(
+                  taskTime
+                ),
+
+              ...(isChild
+                ? {
+                    parentId:
+                      recipientId,
+                  }
+                : {
+                    childId:
+                      recipientId,
+                  }),
+
+              careType: "task",
+            })
         )
       );
 
-      toast.success("Care task assigned ❤️");
+      toast.success(
+        "Care task assigned ❤️"
+      );
 
-      await loadRealCarePlans();
+      await reloadCare();
+
+      setActiveTab("given");
 
       setScreen("home");
+
       resetComposer();
     } catch (error) {
       console.error(
@@ -400,44 +772,70 @@ export default function CarePlanPage() {
       );
 
       toast.error(
-        error.response?.data?.message ||
+        error.response?.data
+          ?.message ||
           "Unable to assign care task."
       );
     }
   };
 
   const assignWalk = async () => {
-    if (selectedRecipients.length === 0) {
-      return;
-    }
-
-    if (!isChild && profile !== "parent") {
-      toast.error("Only parents can assign care.");
+    if (
+      selectedRecipients.length ===
+      0
+    ) {
       return;
     }
 
     try {
       await Promise.all(
-        selectedRecipients.map((recipientId) =>
-          (isChild ? createChildCarePlan : createCarePlan)({
-            title: `Walk for ${currentWalkLevel.display}`,
-            description: `Care activity: ${currentWalkLevel.label} walk`,
-            dueDate: getDueDate(taskTime),
-            ...(isChild
-              ? { parentId: recipientId }
-              : { childId: recipientId }),
-            careType: "walk",
-            walkLevel: currentWalkLevel.id,
-            walkDuration: currentWalkLevel.duration,
-          })
+        selectedRecipients.map(
+          (recipientId) =>
+            (
+              isChild
+                ? createChildCarePlan
+                : createCarePlan
+            )({
+              title: `Walk for ${currentWalkLevel.display}`,
+
+              description: `Care activity: ${currentWalkLevel.label} walk`,
+
+              dueDate:
+                getDueDate(
+                  taskTime
+                ),
+
+              ...(isChild
+                ? {
+                    parentId:
+                      recipientId,
+                  }
+                : {
+                    childId:
+                      recipientId,
+                  }),
+
+              careType: "walk",
+
+              walkLevel:
+                currentWalkLevel.id,
+
+              walkDuration:
+                currentWalkLevel.duration,
+            })
         )
       );
 
-      toast.success("Walk care assigned ❤️");
+      toast.success(
+        "Walk care assigned ❤️"
+      );
 
-      await loadRealCarePlans();
+      await reloadCare();
+
+      setActiveTab("given");
 
       setScreen("home");
+
       resetComposer();
     } catch (error) {
       console.error(
@@ -446,87 +844,181 @@ export default function CarePlanPage() {
       );
 
       toast.error(
-        error.response?.data?.message ||
+        error.response?.data
+          ?.message ||
           "Unable to assign walk."
       );
     }
   };
 
-  const completeTask = async (id) => {
+  // ----------------------------------------------------------
+  // Complete
+  // ----------------------------------------------------------
+  const completeTask = async (
+    id
+  ) => {
     try {
-      if (isChild) {
-        await updateChildCarePlan(id, "completed");
-      } else {
-        await updateCarePlan(id, { status: "completed" });
-      }
-      await loadRealCarePlans();
-      toast.success("Care task completed");
+      await updateCarePlan(
+        id,
+        {
+          status:
+            "completed",
+        }
+      );
+
+      await reloadCare();
+
+      toast.success(
+        "Care task completed"
+      );
     } catch (error) {
-      console.error("Complete care task error:", error);
+      console.error(
+        "Complete care task error:",
+        error
+      );
+
       toast.error(
-        error.response?.data?.message ||
+        error.response?.data
+          ?.message ||
           "Unable to complete care task."
       );
     }
   };
 
-  const startWalk = (walk) => {
-    const durationSeconds = Math.max(
-      60,
-      (walk.duration || 10) * 60
+  const deleteTask = async (id) => {
+    try {
+      await deleteCarePlan(id);
+
+      await reloadCare();
+
+      toast.success(
+        "Task deleted 💫"
+      );
+    } catch (error) {
+      console.error(
+        "Delete care task error:",
+        error
+      );
+
+      toast.error(
+        error.response?.data
+          ?.message ||
+          "Unable to delete care task."
+      );
+    }
+  };
+
+  // ----------------------------------------------------------
+  // Walk timer
+  // ----------------------------------------------------------
+  const startWalk = (
+    walk
+  ) => {
+    const durationSeconds =
+      Math.max(
+        60,
+        (walk.duration ||
+          10) * 60
+      );
+
+    setActiveWalk(
+      walk
     );
 
-    setActiveWalk(walk);
-    setTimerSeconds(durationSeconds);
-    setTimerFinished(false);
-    setTimerRunning(true);
+    setTimerSeconds(
+      durationSeconds
+    );
+
+    setTimerFinished(
+      false
+    );
+
+    setTimerRunning(
+      true
+    );
+
     setScreen("timer");
   };
 
-  const startSelectedWalk = (level = currentWalkLevel) => {
+  const startSelectedWalk = (
+    level =
+      currentWalkLevel
+  ) => {
     const walk = {
       type: "walk",
+
       title: `${level.display} walk`,
-      level: level.label,
-      levelEmoji: level.emoji,
-      duration: level.duration,
+
+      level:
+        level.label,
+
+      levelEmoji:
+        level.emoji,
+
+      duration:
+        level.duration,
     };
 
     startWalk(walk);
   };
 
   const restartWalk = () => {
-    if (!activeWalk) return;
+    if (!activeWalk) {
+      return;
+    }
 
     setTimerSeconds(
-      Math.max(60, (activeWalk.duration || 10) * 60)
+      Math.max(
+        60,
+        (activeWalk.duration ||
+          10) * 60
+      )
     );
-    setTimerFinished(false);
-    setTimerRunning(true);
+
+    setTimerFinished(
+      false
+    );
+
+    setTimerRunning(
+      true
+    );
   };
 
   const progress =
-    activeWalk && activeWalk.duration
+    activeWalk &&
+    activeWalk.duration
       ? Math.min(
           100,
           Math.max(
             0,
-            ((activeWalk.duration * 60 - timerSeconds) /
-              (activeWalk.duration * 60)) *
+            (
+              (
+                activeWalk.duration *
+                  60 -
+                timerSeconds
+              ) /
+                (
+                  activeWalk.duration *
+                  60
+                )
+            ) *
               100
           )
         )
       : 0;
 
-  const visibleTasks = givenTasks;
-
+  // ==========================================================
+  // GIVE CARE CHOICE
+  // ==========================================================
   if (screen === "give") {
     return (
       <PageLayout>
         <div className="mx-auto w-full max-w-2xl">
           <PageBackButton
-            onClick={goHome}
-            label="Give Care"
+            onClick={
+              goHome
+            }
+            label="Care"
           />
 
           <div className="mb-6">
@@ -544,14 +1036,18 @@ export default function CarePlanPage() {
               emoji="📝"
               title="Task"
               description="Give someone a task"
-              onClick={openTask}
+              onClick={
+                openTask
+              }
             />
 
             <ActionChoice
               emoji="🚶"
               title="Walk"
               description="Give someone a walking goal"
-              onClick={openWalk}
+              onClick={
+                openWalk
+              }
             />
           </div>
         </div>
@@ -559,12 +1055,17 @@ export default function CarePlanPage() {
     );
   }
 
+  // ==========================================================
+  // TASK COMPOSER
+  // ==========================================================
   if (screen === "task") {
     return (
       <PageLayout>
         <div className="mx-auto w-full max-w-2xl">
           <PageBackButton
-            onClick={goHome}
+            onClick={
+              goHome
+            }
             label="Task"
           />
 
@@ -580,12 +1081,19 @@ export default function CarePlanPage() {
             </label>
 
             <input
-              value={taskTitle}
-              onChange={(event) =>
-                setTaskTitle(event.target.value)
+              value={
+                taskTitle
+              }
+              onChange={(
+                event
+              ) =>
+                setTaskTitle(
+                  event.target
+                    .value
+                )
               }
               placeholder="e.g. Finish your homework"
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white"
+              className="mt-2 w-full rounded-2xl border border-rose-100 bg-rose-50/60 px-4 py-3.5 text-sm text-slate-900 outline-none transition focus:border-rose-200 focus:bg-white"
             />
 
             <label className="mt-6 block text-sm font-semibold text-slate-700">
@@ -597,23 +1105,34 @@ export default function CarePlanPage() {
                 <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-400">
                   Loading family members...
                 </p>
-              ) : recipients.length === 0 ? (
+              ) : recipients.length ===
+                0 ? (
                 <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-400">
-                  No connected children found.
+                  No connected family members found.
                 </p>
               ) : (
-                recipients.map((person) => (
-                  <RecipientRow
-                    key={person.id}
-                    person={person}
-                    selected={selectedRecipients.includes(
-                      person.id
-                    )}
-                    onClick={() =>
-                      toggleRecipient(person.id)
-                    }
-                  />
-                ))
+                recipients.map(
+                  (
+                    person
+                  ) => (
+                    <RecipientRow
+                      key={
+                        person.id
+                      }
+                      person={
+                        person
+                      }
+                      selected={selectedRecipients.includes(
+                        person.id
+                      )}
+                      onClick={() =>
+                        toggleRecipient(
+                          person.id
+                        )
+                      }
+                    />
+                  )
+                )
               )}
             </div>
 
@@ -622,29 +1141,53 @@ export default function CarePlanPage() {
             </label>
 
             <select
-              value={taskTime}
-              onChange={(event) =>
-                setTaskTime(event.target.value)
+              value={
+                taskTime
               }
-              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm text-slate-900 outline-none focus:border-slate-400"
+              onChange={(
+                event
+              ) =>
+                setTaskTime(
+                  event.target
+                    .value
+                )
+              }
+              className="mt-2 w-full rounded-2xl border border-rose-100 bg-rose-50/60 px-4 py-3.5 text-sm text-slate-900 outline-none focus:border-rose-200"
             >
-              <option value="today|17:00">Today · 5:00 PM</option>
-              <option value="today|19:00">Today · 7:00 PM</option>
-              <option value="tomorrow|09:00">Tomorrow · 9:00 AM</option>
-              <option value="tomorrow|18:00">Tomorrow · 6:00 PM</option>
+              <option value="today|17:00">
+                Today · 5:00 PM
+              </option>
+
+              <option value="today|19:00">
+                Today · 7:00 PM
+              </option>
+
+              <option value="tomorrow|09:00">
+                Tomorrow · 9:00 AM
+              </option>
+
+              <option value="tomorrow|18:00">
+                Tomorrow · 6:00 PM
+              </option>
             </select>
           </div>
 
           <button
             type="button"
-            onClick={assignTask}
+            onClick={
+              assignTask
+            }
             disabled={
               !taskTitle.trim() ||
-              selectedRecipients.length === 0
+              selectedRecipients.length ===
+                0
             }
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-4 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <span className="text-lg">❤️</span>
+            <span className="text-lg">
+              ❤️
+            </span>
+
             Assign Care
           </button>
         </div>
@@ -652,12 +1195,17 @@ export default function CarePlanPage() {
     );
   }
 
+  // ==========================================================
+  // WALK COMPOSER
+  // ==========================================================
   if (screen === "walk") {
     return (
       <PageLayout>
         <div className="mx-auto w-full max-w-2xl">
           <PageBackButton
-            onClick={goHome}
+            onClick={
+              goHome
+            }
             label="Walk"
           />
 
@@ -677,23 +1225,34 @@ export default function CarePlanPage() {
                 <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-400">
                   Loading family members...
                 </p>
-              ) : recipients.length === 0 ? (
+              ) : recipients.length ===
+                0 ? (
                 <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-400">
-                  No connected children found.
+                  No connected family members found.
                 </p>
               ) : (
-                recipients.map((person) => (
-                  <RecipientRow
-                    key={person.id}
-                    person={person}
-                    selected={selectedRecipients.includes(
-                      person.id
-                    )}
-                    onClick={() =>
-                      toggleRecipient(person.id)
-                    }
-                  />
-                ))
+                recipients.map(
+                  (
+                    person
+                  ) => (
+                    <RecipientRow
+                      key={
+                        person.id
+                      }
+                      person={
+                        person
+                      }
+                      selected={selectedRecipients.includes(
+                        person.id
+                      )}
+                      onClick={() =>
+                        toggleRecipient(
+                          person.id
+                        )
+                      }
+                    />
+                  )
+                )
               )}
             </div>
 
@@ -702,30 +1261,47 @@ export default function CarePlanPage() {
             </label>
 
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {WALK_LEVELS.map((level) => (
-                <WalkLevelCard
-                  key={level.id}
-                  level={level}
-                  selected={
-                    selectedWalkLevel === level.id
-                  }
-                  onClick={() =>
-                    setSelectedWalkLevel(level.id)
-                  }
-                />
-              ))}
+              {WALK_LEVELS.map(
+                (
+                  level
+                ) => (
+                  <WalkLevelCard
+                    key={
+                      level.id
+                    }
+                    level={
+                      level
+                    }
+                    selected={
+                      selectedWalkLevel ===
+                      level.id
+                    }
+                    onClick={() =>
+                      setSelectedWalkLevel(
+                        level.id
+                      )
+                    }
+                  />
+                )
+              )}
             </div>
           </div>
 
           <button
             type="button"
-            onClick={assignWalk}
+            onClick={
+              assignWalk
+            }
             disabled={
-              selectedRecipients.length === 0
+              selectedRecipients.length ===
+              0
             }
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-4 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <span className="text-lg">❤️</span>
+            <span className="text-lg">
+              ❤️
+            </span>
+
             Assign Walk
           </button>
         </div>
@@ -733,22 +1309,29 @@ export default function CarePlanPage() {
     );
   }
 
+  // ==========================================================
+  // WALK TIMER
+  // ==========================================================
   if (screen === "timer") {
     return (
       <PageLayout>
         <div className="mx-auto w-full max-w-2xl">
           <PageBackButton
-            onClick={goHome}
+            onClick={
+              goHome
+            }
             label="Care Walk"
           />
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8">
+          <div className="rounded-[30px] border border-emerald-100 bg-[#fffdfb] p-6 text-center shadow-[0_18px_40px_rgba(16,185,129,0.08)] sm:p-8">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-50 text-3xl">
-              {activeWalk?.levelEmoji || "🚶"}
+              {activeWalk?.levelEmoji ||
+                "🚶"}
             </div>
 
             <h1 className="mt-5 text-2xl font-bold text-slate-900">
-              {activeWalk?.title || "Care Walk"}
+              {activeWalk?.title ||
+                "Care Walk"}
             </h1>
 
             <p className="mt-2 text-sm text-slate-500">
@@ -759,13 +1342,17 @@ export default function CarePlanPage() {
 
             <div className="mt-8">
               <div className="text-6xl font-bold tracking-tight text-slate-900">
-                {formatTime(timerSeconds)}
+                {formatTime(
+                  timerSeconds
+                )}
               </div>
 
               <div className="mt-6 h-3 overflow-hidden rounded-full bg-slate-100">
                 <div
                   className="h-full rounded-full bg-slate-900 transition-all duration-500"
-                  style={{ width: `${progress}%` }}
+                  style={{
+                    width: `${progress}%`,
+                  }}
                 />
               </div>
             </div>
@@ -774,7 +1361,9 @@ export default function CarePlanPage() {
               {timerFinished ? (
                 <button
                   type="button"
-                  onClick={restartWalk}
+                  onClick={
+                    restartWalk
+                  }
                   className="flex-1 rounded-2xl bg-slate-900 px-5 py-3.5 text-sm font-bold text-white hover:bg-slate-800"
                 >
                   Restart Walk
@@ -783,17 +1372,26 @@ export default function CarePlanPage() {
                 <button
                   type="button"
                   onClick={() =>
-                    setTimerRunning((current) => !current)
+                    setTimerRunning(
+                      (
+                        current
+                      ) =>
+                        !current
+                    )
                   }
                   className="flex-1 rounded-2xl bg-slate-900 px-5 py-3.5 text-sm font-bold text-white hover:bg-slate-800"
                 >
-                  {timerRunning ? "Pause" : "Resume"}
+                  {timerRunning
+                    ? "Pause"
+                    : "Resume"}
                 </button>
               )}
 
               <button
                 type="button"
-                onClick={goHome}
+                onClick={
+                  goHome
+                }
                 className="flex-1 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
               >
                 Done
@@ -805,22 +1403,32 @@ export default function CarePlanPage() {
     );
   }
 
+  // ==========================================================
+  // CARE HOME
+  // ==========================================================
   return (
     <PageLayout>
       <div className="mx-auto w-full max-w-2xl">
         <div className="mb-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold text-slate-400">
-                Care Plan
-              </p>
+          <PageBackButton
+            onClick={() =>
+              window.history.back()
+            }
+            label="Back"
+          />
 
-              <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
-                Care for your family ❤️
+          <div className="flex items-start gap-3 rounded-[28px] border border-rose-100 bg-[#fffaf7] p-4 shadow-[0_12px_26px_rgba(15,23,42,0.04)]">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-200 to-orange-100 text-2xl shadow-inner">
+              ❤️
+            </div>
+
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                Care
               </h1>
 
               <p className="mt-1 text-sm text-slate-500">
-                Small things that make family life easier.
+                Look after your family
               </p>
             </div>
           </div>
@@ -828,57 +1436,168 @@ export default function CarePlanPage() {
 
         <button
           type="button"
-          onClick={openGiveCare}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-4 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800 active:scale-[0.99]"
+          onClick={
+            openGiveCare
+          }
+          className="flex w-full items-center justify-center gap-2 rounded-3xl bg-gradient-to-r from-rose-300 via-pink-300 to-orange-200 px-5 py-4 text-sm font-bold text-rose-950 shadow-[0_12px_30px_rgba(251,146,60,0.18)] transition hover:translate-y-[-1px] hover:shadow-[0_16px_36px_rgba(251,146,60,0.22)] active:scale-[0.99]"
         >
-          <span className="text-lg">＋</span>
-          Give Care
-          <span className="ml-1 text-xs font-medium text-slate-300">
-            Task or Walk
+          GIVE CARE
+          <span className="text-lg">
+            ＋
           </span>
         </button>
 
+        <p className="mt-2 text-center text-xs text-slate-500">
+          Assign a task or walk to someone in your family.
+        </p>
+
+        {/* ====================================================
+            THREE FAMILY CARE TABS
+        ==================================================== */}
+        <div className="mt-6 overflow-hidden rounded-3xl border border-rose-100 bg-[#fffaf7] p-1.5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
+          <div className="grid grid-cols-3 gap-1.5">
+            <CareTab
+              active={
+                activeTab ===
+                "all"
+              }
+              onClick={() =>
+                setActiveTab(
+                  "all"
+                )
+              }
+            >
+              All Tasks
+            </CareTab>
+
+            <CareTab
+              active={
+                activeTab ===
+                "mine"
+              }
+              onClick={() =>
+                setActiveTab(
+                  "mine"
+                )
+              }
+            >
+              Given to Me
+            </CareTab>
+
+            <CareTab
+              active={
+                activeTab ===
+                "given"
+              }
+              onClick={() =>
+                setActiveTab(
+                  "given"
+                )
+              }
+            >
+              Given by Me
+            </CareTab>
+          </div>
+        </div>
+
+        {/* ====================================================
+            TASK LIST
+        ==================================================== */}
         <div className="mt-6">
           <div className="mb-3 flex items-center justify-between">
-            <div>
-              <h2 className="text-sm font-bold uppercase tracking-wide text-slate-400">
-                Given by Me
-              </h2>
-            </div>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-slate-400">
+              {activeTab ===
+              "all"
+                ? "All Tasks"
+                : activeTab ===
+                  "mine"
+                ? "Given to Me"
+                : "Given by Me"}
+            </h2>
 
-            <span className="text-xs text-slate-400">
-              Things you gave
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400">
+                {visibleTasks.length}{" "}
+                {visibleTasks.length ===
+                1
+                  ? "activity"
+                  : "activities"}
+              </span>
+
+              {activeTab === "mine" &&
+                completedTasksToClear.length >
+                  0 && (
+                  <button
+                    type="button"
+                    onClick={
+                      clearCompletedTasks
+                    }
+                    className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-bold text-rose-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-100"
+                  >
+                    Clear completed
+                  </button>
+                )}
+            </div>
           </div>
 
           <div className="space-y-3">
-            {visibleTasks.length === 0 ? (
-              <div className="rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-sm">
-                <div className="text-3xl">❤️</div>
+            {visibleTasks.length ===
+            0 ? (
+              <div className="rounded-[28px] border border-dashed border-rose-200 bg-[#fffaf8] p-6 text-center shadow-sm">
+                <div className="text-3xl">
+                  ❤️
+                </div>
 
                 <p className="mt-3 text-sm font-semibold text-slate-700">
                   No care activities yet
                 </p>
 
                 <p className="mt-1 text-xs text-slate-400">
-                  Give a task or walk to someone in your family.
+                  {activeTab ===
+                  "mine"
+                    ? "Nothing has been given to you yet."
+                    : activeTab ===
+                      "given"
+                    ? "You have not given any care activities yet."
+                    : "Your family's care activities will appear here."}
                 </p>
               </div>
             ) : (
-              visibleTasks.map((task) => (
-                <CareCard
-                  key={task.id || task._id}
-                  task={task}
-                  activeTab="given"
-                  onComplete={completeTask}
-                  onStartWalk={startWalk}
-                />
-              ))
+              visibleTasks.map(
+                (
+                  task
+                ) => (
+                  <CareCard
+                    key={
+                      task.id ||
+                      task._id
+                    }
+                    task={
+                      task
+                    }
+                    activeTab={
+                      activeTab
+                    }
+                    onComplete={
+                      completeTask
+                    }
+                    onDelete={
+                      deleteTask
+                    }
+                    onStartWalk={
+                      startWalk
+                    }
+                  />
+                )
+              )
             )}
           </div>
         </div>
 
-        <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        {/* ====================================================
+            CARE WALK
+        ==================================================== */}
+        <div className="mt-8 rounded-[28px] border border-amber-100 bg-[#fffdfb] p-5 shadow-[0_15px_30px_rgba(251,146,60,0.05)] sm:p-6">
           <div className="flex items-start gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-xl">
               🚶
@@ -890,39 +1609,58 @@ export default function CarePlanPage() {
               </h3>
 
               <p className="mt-1 text-sm text-slate-500">
-                A simple timed walk. No step counter needed.
+                A simple timed walk.
+                No step counter needed.
               </p>
             </div>
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
-            {WALK_LEVELS.map((level) => (
-              <button
-                type="button"
-                key={level.id}
-                onClick={() => {
-                  setSelectedWalkLevel(level.id);
-                  startSelectedWalk(level);
-                }}
-                className={`rounded-2xl bg-slate-50 px-3 py-3 text-center transition hover:bg-slate-100 ${
-                  selectedWalkLevel === level.id
-                    ? "ring-2 ring-slate-900/10"
-                    : ""
-                }`}
-              >
-                <div className="text-lg">
-                  {level.emoji}
-                </div>
+            {WALK_LEVELS.map(
+              (
+                level
+              ) => (
+                <button
+                  type="button"
+                  key={
+                    level.id
+                  }
+                  onClick={() => {
+                    setSelectedWalkLevel(
+                      level.id
+                    );
 
-                <p className="mt-1 text-xs font-bold text-slate-800">
-                  {level.label}
-                </p>
+                    startSelectedWalk(
+                      level
+                    );
+                  }}
+                  className={`rounded-2xl bg-slate-50 px-3 py-3 text-center transition hover:bg-slate-100 ${
+                    selectedWalkLevel ===
+                    level.id
+                      ? "ring-2 ring-slate-900/10"
+                      : ""
+                  }`}
+                >
+                  <div className="text-lg">
+                    {
+                      level.emoji
+                    }
+                  </div>
 
-                <p className="mt-0.5 text-[11px] text-slate-400">
-                  {level.display}
-                </p>
-              </button>
-            ))}
+                  <p className="mt-1 text-xs font-bold text-slate-800">
+                    {
+                      level.label
+                    }
+                  </p>
+
+                  <p className="mt-0.5 text-[11px] text-slate-400">
+                    {
+                      level.display
+                    }
+                  </p>
+                </button>
+              )
+            )}
           </div>
         </div>
       </div>
@@ -930,20 +1668,56 @@ export default function CarePlanPage() {
   );
 }
 
-function PageBackButton({ onClick, label }) {
+// ============================================================
+// COMPONENTS
+// ============================================================
+
+function CareTab({
+  active,
+  onClick,
+  children,
+}) {
   return (
     <button
       type="button"
-      onClick={onClick}
-      className="mb-6 flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-900"
+      onClick={
+        onClick
+      }
+      className={`rounded-2xl px-2 py-3 text-xs font-bold transition sm:text-sm ${
+        active
+          ? "bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow-sm"
+          : "text-slate-500 hover:bg-white hover:text-slate-900"
+      }`}
     >
-      <span className="text-lg">←</span>
+      {children}
+    </button>
+  );
+}
+
+function PageBackButton({
+  onClick,
+  label,
+}) {
+  return (
+    <button
+      type="button"
+      onClick={
+        onClick
+      }
+      className="mb-5 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
+    >
+      <span className="text-lg">
+        ←
+      </span>
+
       {label}
     </button>
   );
 }
 
-function ChildCareLayout({ children }) {
+function ChildCareLayout({
+  children,
+}) {
   return (
     <div className="mx-auto min-h-screen w-full max-w-md px-4 pb-24 pt-5">
       {children}
@@ -951,7 +1725,11 @@ function ChildCareLayout({ children }) {
   );
 }
 
-function SectionTitle({ emoji, title, subtitle }) {
+function SectionTitle({
+  emoji,
+  title,
+  subtitle,
+}) {
   return (
     <div className="flex items-start gap-3">
       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-xl">
@@ -980,8 +1758,10 @@ function ActionChoice({
   return (
     <button
       type="button"
-      onClick={onClick}
-      className="group rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+      onClick={
+        onClick
+      }
+      className="group rounded-[28px] border border-rose-100 bg-[#fffdfc] p-5 text-left shadow-[0_12px_28px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:border-rose-200 hover:shadow-[0_18px_32px_rgba(15,23,42,0.06)]"
     >
       <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-2xl">
         {emoji}
@@ -1010,10 +1790,12 @@ function RecipientRow({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={
+        onClick
+      }
       className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 transition ${
         selected
-          ? "border-slate-900 bg-slate-50 ring-2 ring-slate-900/10"
+          ? "border-rose-200 bg-rose-50 ring-2 ring-rose-100"
           : "border-slate-200 bg-white hover:bg-slate-50"
       }`}
     >
@@ -1054,10 +1836,12 @@ function WalkLevelCard({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={
+        onClick
+      }
       className={`rounded-2xl border p-4 text-left transition ${
         selected
-          ? "border-slate-900 bg-slate-50 ring-2 ring-slate-900/10"
+          ? "border-amber-200 bg-amber-50 ring-2 ring-amber-100"
           : "border-slate-200 bg-white hover:bg-slate-50"
       }`}
     >
@@ -1088,22 +1872,25 @@ function CareCard({
   task,
   activeTab,
   onComplete,
+  onDelete,
   onStartWalk,
 }) {
   const completed =
-    task.status === "completed";
+    task.status ===
+    "completed";
 
   return (
     <div
-      className={`rounded-3xl border bg-white p-4 shadow-sm transition sm:p-5 ${
+      className={`rounded-[26px] border p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition sm:p-5 ${
         completed
-          ? "border-emerald-100 bg-emerald-50/30"
-          : "border-slate-200"
+          ? "border-emerald-200 bg-emerald-50/60"
+          : "border-slate-200 bg-white"
       }`}
     >
       <div className="flex items-start gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-xl">
-          {task.type === "walk"
+          {task.type ===
+          "walk"
             ? "🚶"
             : "📝"}
         </div>
@@ -1118,26 +1905,46 @@ function CareCard({
                     : "text-slate-900"
                 }`}
               >
-                {task.title}
+                {
+                  task.title
+                }
               </h3>
 
-              {activeTab === "mine" ? (
-                <p className="mt-1 text-xs text-slate-400">
-                  From {task.fromEmoji} {task.from}
-                </p>
-              ) : (
-                <p className="mt-1 text-xs text-slate-400">
-                  →{" "}
-                  {task.recipients?.length
-                    ? task.recipients.join(" + ")
-                    : "Family"}
-                </p>
-              )}
+              <p className="mt-1 text-xs text-slate-400">
+                From{" "}
+                {
+                  task.sender
+                    ?.emoji
+                }{" "}
+                {
+                  task.sender
+                    ?.name ||
+                  "Family"
+                }{" "}
+                <span className="mx-1">
+                  →
+                </span>
+                {
+                  task.recipient
+                    ?.emoji
+                }{" "}
+                {
+                  task.recipient
+                    ?.name ||
+                  "Family"
+                }
+              </p>
             </div>
 
-            {task.type === "walk" && (
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600">
-                {task.levelEmoji} {task.level}
+            {task.type ===
+              "walk" && (
+              <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800">
+                {
+                  task.levelEmoji
+                }{" "}
+                {
+                  task.level
+                }
               </span>
             )}
           </div>
@@ -1146,29 +1953,36 @@ function CareCard({
             {task.time}
           </p>
 
-          {activeTab === "mine" &&
-            task.type === "walk" &&
-            !completed && (
+          {!completed &&
+            task.isGivenToMe &&
+            task.type ===
+              "walk" && (
               <button
                 type="button"
-                onClick={() => onStartWalk(task)}
-                className="mt-4 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800"
+                onClick={() =>
+                  onStartWalk(
+                    task
+                  )
+                }
+                className="mt-4 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 px-4 py-2.5 text-xs font-bold text-slate-900 shadow-sm hover:translate-y-[-1px]"
               >
                 Start Walk
               </button>
             )}
 
-          {activeTab === "mine" &&
-            task.type === "task" &&
-            !completed && (
+          {!completed &&
+            task.isGivenToMe &&
+            task.type ===
+              "task" && (
               <button
                 type="button"
                 onClick={() =>
                   onComplete(
-                    task.id || task._id
+                    task.id ||
+                      task._id
                   )
                 }
-                className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-100"
               >
                 Complete
               </button>
@@ -1180,19 +1994,38 @@ function CareCard({
             </p>
           )}
 
-          {activeTab === "given" &&
-            task.progress && (
-              <p className="mt-3 text-xs font-semibold text-slate-500">
-                {task.progress}
-              </p>
-            )}
+          {activeTab ===
+            "given" &&
+            !completed && (
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold text-slate-500">
+                  Given to{" "}
+                  {
+                    task
+                      .recipient
+                      ?.name
+                  }
+                </p>
 
-          {activeTab === "given" &&
-            task.status &&
-            !task.progress && (
-              <p className="mt-3 text-xs font-semibold text-slate-500">
-                {task.status}
-              </p>
+                {task.isGivenByMe && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onDelete(
+                        task.id ||
+                          task._id
+                      )
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] font-bold text-rose-600 shadow-[0_8px_18px_rgba(251,113,133,0.12)] transition hover:border-rose-300 hover:bg-rose-100"
+                    aria-label={`Delete ${task.title}`}
+                  >
+                    <span aria-hidden="true">
+                      🗑️
+                    </span>
+                    Delete
+                  </button>
+                )}
+              </div>
             )}
         </div>
       </div>
