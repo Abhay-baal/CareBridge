@@ -14,14 +14,6 @@ const {
   authorize,
 } = require("../middleware/authMiddleware");
 
-/*
- * Both Parent and Child are allowed.
- *
- * The controller decides which Parent profile they can access:
- *
- * Parent -> own profile
- * Child  -> currently active parent
- */
 router.use(
   authenticate,
   authorize("parent", "child")
