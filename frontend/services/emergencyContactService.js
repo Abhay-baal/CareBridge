@@ -1,21 +1,20 @@
 import api from "./api";
 
-export const getEmergencyContacts = async () => {
-  const response = await api.get("/emergency");
-  return response.data;
-};
+export const getEmergencyContacts = () =>
+  api.get("/emergency");
 
-export const createEmergencyContact = async (data) => {
-  const response = await api.post("/emergency", data);
-  return response.data;
-};
+export const createEmergencyContact = (
+  data
+) =>
+  api.post("/emergency", data);
 
-export const updateEmergencyContact = async (id, data) => {
-  const response = await api.put(`/emergency/${id}`, data);
-  return response.data;
-};
+export const updateEmergencyContact = (
+  id,
+  data
+) =>
+  api.put(`/emergency/${id}`, data);
 
-export const deleteEmergencyContact = async (id) => {
-  const response = await api.delete(`/emergency/${id}`);
-  return response.data;
-};
+export const deleteEmergencyContact = (
+  id
+) =>
+  api.delete(`/emergency/${id}`);
