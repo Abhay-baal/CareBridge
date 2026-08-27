@@ -25,5 +25,52 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
+.apple-bottom-nav {
+  padding: 0 12px max(10px, env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+
+.apple-bottom-nav__inner {
+  pointer-events: auto;
+  min-height: 68px;
+  gap: 4px;
+  padding: 7px;
+  border: 1px solid rgb(255 255 255 / 0.75);
+  border-radius: 25px;
+  background: rgb(255 255 255 / 0.72);
+  box-shadow: 0 18px 45px rgb(15 23 42 / 0.14),
+    inset 0 1px 0 rgb(255 255 255 / 0.95);
+  -webkit-backdrop-filter: blur(24px) saturate(165%);
+  backdrop-filter: blur(24px) saturate(165%);
+}
+
+.apple-bottom-nav__item {
+  color: #64748b;
+  line-height: 1;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.apple-bottom-nav__item:hover {
+  color: #0f172a;
+}
+
+.apple-bottom-nav__item--active,
+.apple-bottom-nav__item--emergency-active {
+  color: #0f172a;
+  background: rgb(255 255 255 / 0.88);
+  box-shadow: 0 3px 10px rgb(15 23 42 / 0.1),
+    inset 0 1px 0 rgb(255 255 255 / 0.9);
+}
+
+.apple-bottom-nav__item--emergency-active {
+  color: #dc2626;
+}
+
+@media (min-width: 640px) {
+  .apple-bottom-nav {
+    padding-bottom: 18px;
+  }
+}
+
 /* Leaflet map */
 @import "leaflet/dist/leaflet.css";
