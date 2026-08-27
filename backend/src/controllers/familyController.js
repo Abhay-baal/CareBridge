@@ -88,15 +88,15 @@ const formatFamily = async (family) => {
   await family.populate([
     {
       path: "father",
-      select: "_id fullName email role",
+      select: "_id fullName email phone role",
     },
     {
       path: "mother",
-      select: "_id fullName email role",
+      select: "_id fullName email phone role",
     },
     {
       path: "children",
-      select: "_id fullName email role",
+      select: "_id fullName email phone role",
     },
   ]);
 
