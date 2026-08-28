@@ -16,12 +16,27 @@ const parentChildRoutes = require("./routes/parentChildRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const providerRoutes = require("./routes/providerRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
+const settingsRoutes = require("./routes/settingsRoutes");
+const ownerRoutes = require("./routes/ownerRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 const app = express();
 
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://192.168.1.8:3000",
+      ];
+
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS blocked origin: ${origin}`));
+      }
+    },
   })
 );
 
@@ -54,4 +69,7 @@ app.use("/api/family", familyRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/providers", providerRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/settings", settingsRoutes);
+app.use("/api/owner", ownerRoutes);
+app.use("/api/notifications", notificationRoutes);
 module.exports = app;
