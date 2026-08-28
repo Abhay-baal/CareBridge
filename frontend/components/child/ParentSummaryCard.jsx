@@ -1,14 +1,14 @@
 export default function ParentSummaryCard({ parent }) {
   if (!parent) {
     return (
-      <div className="rounded-2xl bg-white p-5 shadow-sm">
+      <div className="motion-card rounded-2xl bg-white p-5 shadow-sm">
         <p className="text-sm text-gray-500">Parent information unavailable.</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl bg-white p-5 shadow-sm">
+    <div className="motion-card rounded-2xl bg-white p-5 shadow-sm">
       <div className="flex items-center gap-4">
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-xl font-bold text-blue-600">
           {parent.fullName?.charAt(0)?.toUpperCase() || "P"}

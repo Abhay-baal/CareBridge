@@ -72,7 +72,7 @@ export default function FloatingActionButton() {
         onClick={() => setConfirmOpen(true)}
         disabled={sending}
         aria-label="Emergency SOS"
-        className="fixed bottom-20 right-5 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-red-600 text-white shadow-xl ring-4 ring-red-100 transition hover:scale-105 hover:bg-red-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+        className="motion-press fixed bottom-20 right-5 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-red-600 text-white shadow-xl ring-4 ring-red-100 hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <span className="text-sm font-extrabold">
           SOS

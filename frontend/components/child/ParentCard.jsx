@@ -11,7 +11,7 @@ export default function ParentCard({
 
   return (
     <div
-      className={`rounded-2xl border bg-white p-5 shadow-sm ${
+      className={`motion-card rounded-2xl border bg-white p-5 shadow-sm ${
         relationship?.active
           ? "border-blue-500 ring-1 ring-blue-100"
           : "border-gray-100"
@@ -58,7 +58,7 @@ export default function ParentCard({
             type="button"
             onClick={() => onSwitch(relationship._id)}
             disabled={switching}
-            className="flex-1 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="motion-press flex-1 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {switching ? "Switching..." : "Set Active"}
           </button>
@@ -68,7 +68,7 @@ export default function ParentCard({
           type="button"
           onClick={() => onRemove(relationship._id)}
           disabled={removing}
-          className={`rounded-xl border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 ${
+          className={`motion-press rounded-xl border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 ${
             relationship?.active ? "flex-1" : ""
           }`}
         >

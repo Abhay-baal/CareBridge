@@ -7,7 +7,7 @@ export default function ContactCard({
   const phone = contact?.phone || "";
 
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition duration-200 hover:shadow-md">
+    <div className="motion-card rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3">
@@ -29,7 +29,7 @@ export default function ContactCard({
           {phone && (
             <a
               href={`tel:${phone}`}
-              className="mt-4 flex items-center gap-2 text-sm font-medium text-gray-700 transition hover:text-green-700"
+              className="motion-press mt-4 flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-green-700"
             >
               <span aria-hidden="true">📞</span>
               <span>{phone}</span>
@@ -41,7 +41,7 @@ export default function ContactCard({
           <a
             href={`tel:${phone}`}
             aria-label={`Call ${contact?.name || "emergency contact"}`}
-            className="shrink-0 rounded-xl bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 transition hover:bg-green-100 active:scale-95"
+            className="motion-press shrink-0 rounded-xl bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-100"
           >
             Call
           </a>
@@ -53,7 +53,7 @@ export default function ContactCard({
           type="button"
           onClick={() => onEdit?.(contact)}
           disabled={deleting}
-          className="flex-1 rounded-xl bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+          className="motion-press flex-1 rounded-xl bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Edit
         </button>
@@ -62,7 +62,7 @@ export default function ContactCard({
           type="button"
           onClick={() => onDelete?.(contact?._id)}
           disabled={deleting}
-          className="flex-1 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+          className="motion-press flex-1 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {deleting ? "Deleting..." : "Delete"}
         </button>
