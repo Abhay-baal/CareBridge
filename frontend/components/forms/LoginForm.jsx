@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import toast from "react-hot-toast";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
@@ -47,8 +48,14 @@ export default function LoginForm() {
     try {
       setLoading(true);
 
+      console.log("===== MOBILE LOGIN DEBUG =====");
+      console.log("Email being sent:", JSON.stringify(email));
+      console.log("Email length:", email.length);
+      console.log("Password length:", password.length);
+      console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
+
       const response = await loginUser({
-        email,
+        email: email.trim(),
         password,
       });
 
@@ -84,10 +91,18 @@ export default function LoginForm() {
       } else if (user?.role === "parent") {
         router.push("/dashboard");
       } else {
-        setError("Invalid user role. Please contact support.");
+        setServerError(
+          "Invalid user role. Please contact support."
+        );
       }
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error("===== LOGIN ERROR DEBUG =====");
+      console.error("Status:", error.response?.status);
+      console.error("Response:", error.response?.data);
+      console.error("Request URL:", error.config?.url);
+      console.error("Base URL:", error.config?.baseURL);
+      console.error("Request data:", error.config?.data);
+      console.error("Full error:", error);
 
       const message =
         error.response?.data?.message ||
@@ -129,6 +144,15 @@ export default function LoginForm() {
       <Button type="submit" disabled={loading}>
         {loading ? "Logging in..." : "Login"}
       </Button>
+
+      <div className="mt-4 text-center">
+        <Link
+          href="/forgot-password"
+          className="text-sm font-semibold text-blue-600 transition hover:text-blue-700"
+        >
+          Forgot password?
+        </Link>
+      </div>
     </form>
   );
 }

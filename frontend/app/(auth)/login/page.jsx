@@ -47,8 +47,16 @@ export default function LoginPage() {
             <Link
               href="/register"
               className="mt-1 inline-block text-sm font-semibold text-blue-600 transition hover:text-blue-700"
+              >
+                Register
+              </Link>
+            </div>
+          <div className="mt-4 text-center">
+            <Link
+              href="/forgot-password"
+              className="text-sm font-semibold text-gray-500 transition hover:text-blue-600"
             >
-              Register
+              Forgot password?
             </Link>
           </div>
         </div>

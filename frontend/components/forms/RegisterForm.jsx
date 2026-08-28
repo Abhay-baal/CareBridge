@@ -85,7 +85,11 @@ export default function RegisterForm() {
 
       console.log("Registration successful:", data);
 
-      router.push("/login");
+      router.push(
+        `/verify-email?email=${encodeURIComponent(
+          formData.email
+        )}`
+      );
     } catch (error) {
       console.error("Registration failed:", error);
 
