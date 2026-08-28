@@ -7,7 +7,7 @@ export default function AppointmentCard({
 }) {
   if (loading) {
     return (
-      <div className="rounded-xl bg-white p-5 shadow-sm">
+      <div className="motion-card rounded-xl bg-white p-5 shadow-sm">
         <p className="text-sm text-gray-500">
           Loading appointment...
         </p>
@@ -17,7 +17,7 @@ export default function AppointmentCard({
 
   if (error) {
     return (
-      <div className="rounded-xl bg-white p-5 shadow-sm">
+      <div className="motion-card rounded-xl bg-white p-5 shadow-sm">
         <p className="text-sm text-red-500">{error}</p>
       </div>
     );
@@ -25,7 +25,7 @@ export default function AppointmentCard({
 
   if (!appointment) {
     return (
-      <div className="rounded-xl bg-white p-5 shadow-sm">
+      <div className="motion-card rounded-xl bg-white p-5 shadow-sm">
         <p className="text-sm text-gray-500">
           No upcoming appointments.
         </p>
@@ -38,7 +38,7 @@ export default function AppointmentCard({
   );
 
   return (
-    <div className="rounded-xl bg-white p-5 shadow-sm">
+    <div className="motion-card rounded-xl bg-white p-5 shadow-sm">
       <p className="text-sm font-medium text-gray-500">
         Upcoming Appointment
       </p>

@@ -32,8 +32,8 @@ const navigation = [
     icon: Siren,
   },
   {
-    href: "/child/profile",
-    label: "Profile",
+    href: "/settings",
+    label: "Account",
     icon: UserRound,
   },
 ];
@@ -54,7 +54,7 @@ export default function ChildNavigation() {
             <Link
               key={item.href}
               href={item.href}
-              className={`apple-bottom-nav__item flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-semibold transition active:scale-95 ${
+              className={`apple-bottom-nav__item motion-press flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-semibold ${
                 active
                   ? item.label === "Emergency"
                     ? "apple-bottom-nav__item--emergency-active"
@@ -63,7 +63,10 @@ export default function ChildNavigation() {
               }`}
               aria-current={active ? "page" : undefined}
             >
-              <Icon className="h-[21px] w-[21px]" strokeWidth={active ? 2.5 : 2} />
+              <Icon
+                className="h-[21px] w-[21px]"
+                strokeWidth={active ? 2.5 : 2}
+              />
 
               <span className="truncate">{item.label}</span>
             </Link>

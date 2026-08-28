@@ -3,7 +3,7 @@ export default function TodayTasks({
   onToggle,
 }) {
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+    <div className="motion-card rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-semibold text-gray-900">
           Today&apos;s Tasks
@@ -36,7 +36,7 @@ export default function TodayTasks({
                 key={task._id}
                 type="button"
                 onClick={() => onToggle?.(task)}
-                className="flex w-full items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3 text-left transition duration-200 hover:bg-gray-100 hover:shadow-sm"
+                className="motion-press flex w-full items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3 text-left hover:bg-gray-100 hover:shadow-sm"
               >
                 <span
                   className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${

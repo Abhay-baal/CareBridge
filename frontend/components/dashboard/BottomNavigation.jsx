@@ -41,8 +41,8 @@ export default function BottomNavigation() {
       icon: Siren,
     },
     {
-      name: "Profile",
-      href: "/profile",
+      name: "Account",
+      href: "/settings",
       icon: UserRound,
     },
   ];
@@ -60,7 +60,7 @@ export default function BottomNavigation() {
             <Link
               key={item.href}
               href={item.href}
-              className={`apple-bottom-nav__item flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-semibold transition active:scale-95 ${
+              className={`apple-bottom-nav__item motion-press flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-semibold ${
                 isActive
                   ? item.name === "Emergency"
                     ? "apple-bottom-nav__item--emergency-active"
@@ -69,7 +69,10 @@ export default function BottomNavigation() {
               }`}
               aria-current={isActive ? "page" : undefined}
             >
-              <Icon className="h-[21px] w-[21px]" strokeWidth={isActive ? 2.5 : 2} />
+              <Icon
+                className="h-[21px] w-[21px]"
+                strokeWidth={isActive ? 2.5 : 2}
+              />
 
               <span className="truncate">{item.name}</span>
             </Link>

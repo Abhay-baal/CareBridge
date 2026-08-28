@@ -15,7 +15,7 @@ export default function WelcomeHeader({
           <Link
             href="/family"
             aria-label="Open Family"
-            className="group -mt-1 flex shrink-0 items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3.5 py-2.5 shadow-sm transition hover:border-gray-300 hover:shadow-md active:scale-95"
+            className="group motion-press -mt-1 flex shrink-0 items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3.5 py-2.5 shadow-sm hover:border-gray-300 hover:shadow-md"
           >
             <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-lg transition group-hover:bg-gray-900 group-hover:text-white">
               🏡

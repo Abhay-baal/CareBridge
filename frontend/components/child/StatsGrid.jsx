@@ -16,7 +16,7 @@ export default function StatsGrid({
       {stats.map(([icon, label, value]) => (
         <div
           key={label}
-          className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition duration-200 hover:shadow-md"
+          className="motion-card rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
         >
           <div className="flex items-center gap-2">
             <span className="text-base">{icon}</span>
