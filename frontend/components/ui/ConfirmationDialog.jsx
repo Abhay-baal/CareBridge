@@ -14,7 +14,7 @@ export default function ConfirmationDialog({
 
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl">
+      <div className="motion-fade-up w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl">
         <h2 className="text-xl font-bold text-gray-900">
           {title}
         </h2>
@@ -26,14 +26,14 @@ export default function ConfirmationDialog({
         <div className="mt-6 flex gap-3">
           <button
             onClick={onCancel}
-            className="flex-1 rounded-xl border border-gray-200 px-4 py-3 font-medium text-gray-700"
+            className="motion-press flex-1 rounded-xl border border-gray-200 px-4 py-3 font-medium text-gray-700 hover:bg-gray-50"
           >
             {cancelText}
           </button>
 
           <button
             onClick={onConfirm}
-            className={`flex-1 rounded-xl px-4 py-3 font-medium text-white ${
+            className={`motion-press flex-1 rounded-xl px-4 py-3 font-medium text-white ${
               danger ? "bg-red-600" : "bg-blue-600"
             }`}
           >

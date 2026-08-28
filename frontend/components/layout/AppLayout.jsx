@@ -1,6 +1,7 @@
 "use client";
 
 import BottomNavigation from "@/components/dashboard/BottomNavigation";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 import {
@@ -10,6 +11,7 @@ import {
 export default function AppLayout({ children }) {
   const [showBottomNav, setShowBottomNav] =
     useState(true);
+  const pathname = usePathname();
 
   return (
     <BottomNavContext.Provider
@@ -18,9 +20,11 @@ export default function AppLayout({ children }) {
         setShowBottomNav,
       }}
     >
-      <main className="min-h-screen bg-[#fafafa] pb-24">
+      <main className="min-h-screen overflow-x-hidden bg-[#fafafa] pb-24">
         <div className="mx-auto min-h-screen max-w-md px-4 pt-5">
-          {children}
+          <div key={pathname} className="motion-page">
+            {children}
+          </div>
         </div>
 
         <BottomNavigation />
