@@ -5,7 +5,7 @@ export default function LocationCard() {
     <div className="space-y-4">
       <MapPlaceholder />
 
-      <div className="rounded-xl border bg-white p-4 shadow-sm">
+      <div className="motion-card rounded-xl border bg-white p-4 shadow-sm">
         <h3 className="font-semibold text-gray-900">
           Current Address
         </h3>

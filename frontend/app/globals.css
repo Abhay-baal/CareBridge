@@ -3,6 +3,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-snap: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 @theme inline {
@@ -19,10 +21,105 @@
   }
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: rgb(14 165 233 / 0.18);
+  color: inherit;
+}
+
+.owner-portal { background: radial-gradient(circle at 8% 10%, #ffe5e8 0, transparent 34%), radial-gradient(circle at 90% 85%, #dcefe9 0, transparent 36%), #f8f6f2; }
+.owner-welcome { background: linear-gradient(145deg, #fff0ed 0%, #f7e9f0 50%, #e8f1ed 100%); }
+.owner-stat { min-height: 220px; border: 1px solid rgb(255 255 255 / 0.85); border-radius: 1.75rem; padding: 1.35rem; box-shadow: 0 14px 35px rgb(72 53 57 / 0.08); }
+.owner-stat--rose { background: #ffe9e7; }
+.owner-stat--sage { background: #e3f1e8; }
+.owner-stat--sky { background: #e4f1f5; }
+.owner-stat--lavender { background: #eee9f5; }
+.owner-step { display: flex; height: 28px; width: 28px; align-items: center; justify-content: center; border-radius: 999px; background: #f1f5f9; }
+.owner-step--active { background: #ffe5e8; color: #e87984; }
+@keyframes owner-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.animate-owner-rise { animation: owner-rise 500ms ease-out both; }
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.992);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes soft-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.motion-page {
+  animation: page-enter 220ms var(--motion-ease-out) both;
+  transform: translateZ(0);
+  will-change: opacity, transform;
+}
+
+.motion-card {
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  transition:
+    transform 180ms var(--motion-ease-snap),
+    box-shadow 180ms var(--motion-ease-snap),
+    border-color 180ms var(--motion-ease-snap),
+    background-color 180ms var(--motion-ease-snap),
+    color 180ms var(--motion-ease-snap);
+  will-change: transform;
+}
+
+.motion-card:hover {
+  transform: translate3d(0, -2px, 0);
+}
+
+.motion-press {
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  transition:
+    transform 150ms var(--motion-ease-snap),
+    opacity 150ms var(--motion-ease-snap),
+    background-color 150ms var(--motion-ease-snap),
+    border-color 150ms var(--motion-ease-snap),
+    color 150ms var(--motion-ease-snap),
+    box-shadow 150ms var(--motion-ease-snap);
+  will-change: transform;
+}
+
+.motion-press:active {
+  transform: translate3d(0, 1px, 0) scale(0.985);
+}
+
+.motion-fade-up {
+  animation: soft-rise 240ms var(--motion-ease-out) both;
 }
 
 .apple-bottom-nav {
@@ -42,12 +139,20 @@ body {
     inset 0 1px 0 rgb(255 255 255 / 0.95);
   -webkit-backdrop-filter: blur(24px) saturate(165%);
   backdrop-filter: blur(24px) saturate(165%);
+  transform: translateZ(0);
 }
 
 .apple-bottom-nav__item {
   color: #64748b;
   line-height: 1;
   -webkit-tap-highlight-color: transparent;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  transition:
+    transform 150ms var(--motion-ease-snap),
+    color 150ms var(--motion-ease-snap),
+    background-color 150ms var(--motion-ease-snap),
+    box-shadow 150ms var(--motion-ease-snap);
 }
 
 .apple-bottom-nav__item:hover {
@@ -60,6 +165,7 @@ body {
   background: rgb(255 255 255 / 0.88);
   box-shadow: 0 3px 10px rgb(15 23 42 / 0.1),
     inset 0 1px 0 rgb(255 255 255 / 0.9);
+  transform: translate3d(0, -1px, 0);
 }
 
 .apple-bottom-nav__item--emergency-active {
@@ -72,5 +178,164 @@ body {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .motion-page,
+  .motion-fade-up,
+  .animate-owner-rise {
+    animation: none !important;
+  }
+}
+
 /* Leaflet map */
 @import "leaflet/dist/leaflet.css";
+
+/* =========================================================
+   CareBridge Dark Mode
+   ========================================================= */
+
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background: #111014;
+  color: #f5f3f7;
+}
+
+/* Main surfaces */
+html.dark .bg-white {
+  background-color: #1b181f !important;
+}
+
+html.dark .bg-gray-50 {
+  background-color: #151318 !important;
+}
+
+html.dark .bg-gray-100 {
+  background-color: #252129 !important;
+}
+
+html.dark .bg-gray-200 {
+  background-color: #302b35 !important;
+}
+
+/* Text */
+html.dark .text-gray-900 {
+  color: #f5f3f7 !important;
+}
+
+html.dark .text-gray-800 {
+  color: #eeeaf1 !important;
+}
+
+html.dark .text-gray-700 {
+  color: #ddd7e2 !important;
+}
+
+html.dark .text-gray-600 {
+  color: #c3bcc8 !important;
+}
+
+html.dark .text-gray-500 {
+  color: #aaa2af !important;
+}
+
+html.dark .text-gray-400 {
+  color: #8f8795 !important;
+}
+
+/* Borders */
+html.dark .border-gray-100 {
+  border-color: #302b35 !important;
+}
+
+html.dark .border-gray-200 {
+  border-color: #3a3440 !important;
+}
+
+/* Inputs */
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: #1b181f !important;
+  color: #f5f3f7 !important;
+  border-color: #3a3440 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #817987 !important;
+}
+
+/* Purple light backgrounds */
+html.dark .bg-purple-50 {
+  background-color: #2b2135 !important;
+}
+
+html.dark .bg-\[\#f8f1ff\] {
+  background-color: #2b2135 !important;
+}
+
+html.dark .bg-\[\#f8efff\] {
+  background-color: #2b2135 !important;
+}
+
+html.dark .bg-\[\#faf8fc\] {
+  background-color: #211c25 !important;
+}
+
+/* Common cards */
+html.dark .shadow-sm,
+html.dark .shadow,
+html.dark .shadow-md,
+html.dark .shadow-lg {
+  --tw-shadow-color: rgba(0, 0, 0, 0.35);
+}
+
+/* Modals */
+html.dark [role="dialog"] {
+  background-color: #1b181f !important;
+}
+
+/* Select dropdown */
+html.dark option {
+  background-color: #1b181f;
+  color: #f5f3f7;
+}
+
+/* Keep purple CareBridge buttons readable */
+html.dark .bg-\[\#9b72c5\] {
+  background-color: #9b72c5 !important;
+  color: #ffffff !important;
+}
+
+/* Purple text */
+html.dark .text-\[\#9b72c5\] {
+  color: #c29be3 !important;
+}
+
+html.dark .text-\[\#8d63b9\] {
+  color: #bd91dc !important;
+}
+
+/* Purple borders */
+html.dark .border-purple-100 {
+  border-color: #44334f !important;
+}
+
+html.dark .border-purple-200 {
+  border-color: #594269 !important;
+}
