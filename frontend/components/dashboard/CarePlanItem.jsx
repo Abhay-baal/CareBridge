@@ -4,7 +4,7 @@ export default function CarePlanItem({ carePlan, onUpdate }) {
   const isCompleted = carePlan.status === "completed";
 
   return (
-    <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+    <div className="motion-card flex items-center justify-between rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
       <div className="flex-1">
         <h3
           className={`font-medium ${
@@ -36,7 +36,7 @@ export default function CarePlanItem({ carePlan, onUpdate }) {
         type="checkbox"
         checked={isCompleted}
         onChange={() => onUpdate(carePlan)}
-        className="h-5 w-5 cursor-pointer"
+        className="motion-press h-5 w-5 cursor-pointer"
       />
     </div>
   );

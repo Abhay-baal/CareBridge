@@ -105,7 +105,7 @@ export default function ParentProfileForm() {
 
   if (loading) {
     return (
-      <div className="rounded-2xl bg-white p-6 shadow-sm">
+      <div className="motion-card rounded-2xl bg-white p-6 shadow-sm">
         <p className="text-center text-gray-500">
           Loading profile...
         </p>
@@ -130,7 +130,7 @@ export default function ParentProfileForm() {
         </div>
       )}
 
-      <div className="rounded-2xl bg-white p-5 shadow-sm">
+      <div className="motion-card rounded-2xl bg-white p-5 shadow-sm">
         <h2 className="mb-5 text-lg font-semibold text-gray-900">
           Personal Information
         </h2>
@@ -163,7 +163,7 @@ export default function ParentProfileForm() {
         </div>
       </div>
 
-      <div className="rounded-2xl bg-white p-5 shadow-sm">
+      <div className="motion-card rounded-2xl bg-white p-5 shadow-sm">
         <h2 className="mb-5 text-lg font-semibold text-gray-900">
           Medical Information
         </h2>
@@ -224,7 +224,7 @@ export default function ParentProfileForm() {
       <button
         type="submit"
         disabled={saving}
-        className="w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="motion-press w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {saving ? "Saving Changes..." : "Save Changes"}
       </button>

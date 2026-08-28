@@ -10,7 +10,7 @@ export default function CarePlanList({
 }) {
   if (loading) {
     return (
-      <div className="rounded-xl bg-white p-5 shadow-sm">
+      <div className="motion-card rounded-xl bg-white p-5 shadow-sm">
         <p className="text-sm text-gray-500">
           Loading today&apos;s care plan...
         </p>
@@ -20,7 +20,7 @@ export default function CarePlanList({
 
   if (error) {
     return (
-      <div className="rounded-xl bg-white p-5 shadow-sm">
+      <div className="motion-card rounded-xl bg-white p-5 shadow-sm">
         <p className="text-sm text-red-500">{error}</p>
       </div>
     );
@@ -28,7 +28,7 @@ export default function CarePlanList({
 
   if (carePlans.length === 0) {
     return (
-      <div className="rounded-xl bg-white p-5 shadow-sm">
+      <div className="motion-card rounded-xl bg-white p-5 shadow-sm">
         <p className="text-sm text-gray-500">
           No care plan for today.
         </p>

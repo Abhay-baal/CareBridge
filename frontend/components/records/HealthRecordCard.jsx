@@ -1,6 +1,6 @@
 export default function HealthRecordCard({ record }) {
   return (
-    <div className="flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm">
+    <div className="motion-card flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm">
       <div>
         <h3 className="font-semibold text-gray-900">
           {record.title}
@@ -20,7 +20,7 @@ export default function HealthRecordCard({ record }) {
 
       <button
         type="button"
-        className="rounded-lg bg-blue-50 px-3 py-2 text-sm font-medium text-blue-600"
+        className="motion-press rounded-lg bg-blue-50 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100"
       >
         View
       </button>
