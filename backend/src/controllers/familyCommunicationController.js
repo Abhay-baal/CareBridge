@@ -4,6 +4,7 @@ const FamilySnap = require("../models/FamilySnap");
 const ParentChild = require("../models/ParentChild");
 const User = require("../models/User");
 const Family = require("../models/Family");
+const { sendPushToUser } = require("../services/pushService");
 
 /*
  * Family membership is calculated from the existing ParentChild
@@ -258,6 +259,28 @@ const sendFamilyMessage = async (req, res) => {
       .populate("sender", "fullName role")
       .populate("recipients", "fullName role");
 
+    const senderName =
+      populated?.sender?.fullName || "Family update";
+
+    Promise.all(
+      recipients.map((recipientId) =>
+        sendPushToUser(recipientId, {
+          title: "New family message",
+          body: `${senderName}: ${message.trim().slice(0, 90)}`,
+          data: {
+            type: "family-message",
+            senderId: req.user.id.toString(),
+          },
+          clickAction: "/family",
+        }).catch((error) => {
+          console.warn(
+            "Family push notification failed:",
+            error.message
+          );
+        })
+      )
+    ).catch(() => {});
+
     return res.status(201).json({
       success: true,
       data: populated,
@@ -507,6 +530,31 @@ const createFamilySnap = async (req, res) => {
     })
       .populate("sender", "fullName role")
       .populate("recipient", "fullName role");
+
+    const senderName =
+      populated?.[0]?.sender?.fullName || "Family snap";
+
+    Promise.all(
+      populated.map((snap) =>
+        sendPushToUser(snap.recipient._id || snap.recipient, {
+          title: "New family snap",
+          body:
+            caption?.trim()
+              ? `${senderName}: ${caption.trim().slice(0, 90)}`
+              : `${senderName} sent a snap`,
+          data: {
+            type: "family-snap",
+            senderId: req.user.id.toString(),
+          },
+          clickAction: "/family",
+        }).catch((error) => {
+          console.warn(
+            "Family snap push failed:",
+            error.message
+          );
+        })
+      )
+    ).catch(() => {});
 
     return res.status(201).json({
       success: true,

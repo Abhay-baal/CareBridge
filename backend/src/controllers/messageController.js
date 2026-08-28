@@ -1,5 +1,6 @@
 const Message = require("../models/Message");
 const ParentChild = require("../models/ParentChild");
+const { sendPushToUser } = require("../services/pushService");
 
 const getRelationshipForUser = async (req, relationshipId) => {
   return ParentChild.findOne({
@@ -120,6 +121,25 @@ const sendMessage = async (req, res) => {
     )
       .populate("sender", "fullName role")
       .populate("receiver", "fullName role");
+
+    const senderName =
+      populatedMessage?.sender?.fullName || "New message";
+
+    sendPushToUser(receiver, {
+      title: "New message",
+      body:
+        messageType === "snap"
+          ? `${senderName} sent a snap`
+          : `${senderName}: ${message.trim().slice(0, 90)}`,
+      data: {
+        type: "message",
+        parentChildId: relationship._id.toString(),
+        senderId: req.user.id.toString(),
+      },
+      clickAction: "/chat",
+    }).catch((error) => {
+      console.warn("Push notification send failed:", error.message);
+    });
 
     return res.status(201).json({
       success: true,
