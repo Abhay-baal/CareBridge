@@ -541,7 +541,7 @@ export default function FamilyCommunication() {
   if (loading) {
     return (
       <section className="mt-4 space-y-3">
-        <div className="rounded-2xl border bg-white p-4 shadow-sm">
+        <div className="motion-card rounded-2xl border bg-white p-4 shadow-sm">
           <div className="animate-pulse space-y-4">
             <div className="mx-auto h-8 w-40 rounded-full bg-gray-200" />
             <div className="mx-auto h-16 w-24 rounded-2xl bg-gray-200" />
@@ -549,7 +549,7 @@ export default function FamilyCommunication() {
           </div>
         </div>
 
-        <div className="rounded-2xl border bg-white p-5 shadow-sm">
+        <div className="motion-card rounded-2xl border bg-white p-5 shadow-sm">
           <div className="animate-pulse space-y-3">
             <div className="h-5 w-40 rounded bg-gray-200" />
             <div className="h-24 rounded-xl bg-gray-100" />
@@ -565,7 +565,7 @@ export default function FamilyCommunication() {
       {/* =====================================================
           FAMILY MESSAGE STREAK
       ====================================================== */}
-      <div className="relative overflow-hidden rounded-3xl border border-rose-100 bg-gradient-to-br from-rose-50 via-white to-amber-50 p-6 text-center shadow-[0_12px_30px_rgba(251,113,133,0.10)]">
+      <div className="motion-card relative overflow-hidden rounded-3xl border border-rose-100 bg-gradient-to-br from-rose-50 via-white to-amber-50 p-6 text-center shadow-[0_12px_30px_rgba(251,113,133,0.10)]">
 
         <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-amber-100/70 blur-2xl" />
         <div className="pointer-events-none absolute -bottom-12 -left-8 h-28 w-28 rounded-full bg-rose-100/70 blur-2xl" />
@@ -605,7 +605,7 @@ export default function FamilyCommunication() {
       {/* =====================================================
           CURRENT FAMILY MESSAGE
       ====================================================== */}
-      <div className="overflow-hidden rounded-[28px] border border-rose-100 bg-white shadow-[0_14px_32px_rgba(244,114,182,0.08)]">
+      <div className="motion-card overflow-hidden rounded-[28px] border border-rose-100 bg-white shadow-[0_14px_32px_rgba(244,114,182,0.08)]">
 
         <div className="border-b border-rose-100 bg-gradient-to-r from-rose-50 via-pink-50 to-orange-50 px-5 py-5">
           <div className="flex items-center gap-3">
@@ -750,7 +750,7 @@ export default function FamilyCommunication() {
                   return (
                     <label
                       key={id}
-                      className="flex cursor-pointer items-center gap-3 rounded-xl bg-white/80 p-3 text-sm transition hover:bg-white"
+                      className="motion-press flex cursor-pointer items-center gap-3 rounded-xl bg-white/80 p-3 text-sm hover:bg-white"
                     >
                       <input
                         type="checkbox"
@@ -789,7 +789,7 @@ export default function FamilyCommunication() {
               !message.trim() ||
               otherMembers.length === 0
             }
-            className="mt-3 w-full rounded-xl bg-rose-500 px-4 py-2.5 text-sm font-black text-white shadow-sm shadow-rose-200 transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+            className="motion-press mt-3 w-full rounded-xl bg-rose-500 px-4 py-2.5 text-sm font-black text-white shadow-sm shadow-rose-200 hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {sending
               ? "Sending..."
@@ -1015,7 +1015,7 @@ export default function FamilyCommunication() {
                         return (
                           <label
                             key={id}
-                            className="flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm font-medium text-gray-900 hover:bg-white"
+                            className="motion-press flex cursor-pointer items-center gap-2 rounded-lg p-2 text-sm font-medium text-gray-900 hover:bg-white"
                           >
                             <input
                               type="checkbox"
@@ -1066,7 +1066,7 @@ export default function FamilyCommunication() {
                     }
                   }}
                   disabled={uploadingSnap}
-                  className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-700 disabled:opacity-50"
+                  className="motion-press flex-1 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -1078,7 +1078,7 @@ export default function FamilyCommunication() {
                     uploadingSnap ||
                     locatingSnap
                   }
-                  className="flex-1 rounded-xl bg-gray-900 px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
+                  className="motion-press flex-1 rounded-xl bg-gray-900 px-4 py-3 text-sm font-bold text-white hover:bg-gray-800 disabled:opacity-50"
                 >
                   {uploadingSnap
                     ? "Sharing..."
@@ -1146,7 +1146,7 @@ export default function FamilyCommunication() {
               </button>
             </div>
 
-            <div className="overflow-hidden rounded-3xl border border-gray-200 bg-black shadow-sm">
+            <div className="motion-card overflow-hidden rounded-3xl border border-gray-200 bg-black shadow-sm">
               <img
                 src={latestMySnap.imageData}
                 alt="My family snap"
@@ -1192,7 +1192,7 @@ export default function FamilyCommunication() {
                 </p>
               </div>
 
-              <div className="overflow-hidden rounded-3xl border border-gray-200 bg-black shadow-sm">
+              <div className="motion-card overflow-hidden rounded-3xl border border-gray-200 bg-black shadow-sm">
                 <img
                   src={snap.imageData}
                   alt={`${
