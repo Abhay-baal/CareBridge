@@ -9,6 +9,11 @@ const withPWAConfig = withPWA({
 
 const nextConfig = {
   reactStrictMode: true,
+  allowedDevOrigins: [
+    "192.168.1.8",
+    "localhost",
+    "127.0.0.1",
+  ],
 };
 
 export default withPWAConfig(nextConfig);
