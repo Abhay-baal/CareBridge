@@ -4,6 +4,10 @@ const router = express.Router();
 const {
   registerUser,
   loginUser,
+  requestEmailVerification,
+  verifyEmail,
+  forgotPassword,
+  resetPassword,
 } = require("../controllers/authController");
 
 const {
@@ -13,6 +17,10 @@ const {
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+router.post("/request-verification", requestEmailVerification);
+router.post("/verify-email", verifyEmail);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 
 // Protected route
 router.get("/me", authenticate, (req, res) => {
