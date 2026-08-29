@@ -1,5 +1,7 @@
 "use client";
 
+import { getGenderAvatar } from "@/utils/genderAvatar";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { BottomNavContext } from "@/components/layout/BottomNavContext";
@@ -166,7 +168,7 @@ const Avatar = ({
     >
       {group
         ? "👨‍👩‍👧"
-        : getInitial(user)}
+        : getGenderAvatar(user)}
     </div>
   );
 };
