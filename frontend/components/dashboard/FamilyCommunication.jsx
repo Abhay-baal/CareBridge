@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import { getGenderAvatar } from "@/utils/genderAvatar";
 
 import {
   getFamilyMembers,
@@ -16,10 +17,8 @@ import {
 const getUserId = (user) =>
   user?._id || user?.id || "";
 
-const getRoleEmoji = (role) => {
-  if (role === "parent") return "👩";
-  if (role === "child") return "👦";
-  return "👤";
+const getRoleEmoji = (user) => {
+  return getGenderAvatar(user);
 };
 
 const getResponseArray = (response) => {
@@ -651,7 +650,7 @@ export default function FamilyCommunication() {
                   className={`flex gap-3 ${isMine ? "flex-row-reverse" : ""}`}
                 >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-100 to-orange-100 text-xl shadow-sm">
-                    {getRoleEmoji(sender?.role)}
+                    {getRoleEmoji(sender)}
                   </div>
 
                   <div className={`min-w-0 max-w-[85%] ${isMine ? "text-right" : ""}`}>
@@ -767,9 +766,7 @@ export default function FamilyCommunication() {
                       />
 
                       <span className="text-lg">
-                        {getRoleEmoji(
-                          member.role
-                        )}
+                        {getRoleEmoji(member)}
                       </span>
 
                       <span className="font-semibold text-gray-900">
@@ -1032,9 +1029,7 @@ export default function FamilyCommunication() {
                             />
 
                             <span>
-                              {getRoleEmoji(
-                                member.role
-                              )}
+                              {getRoleEmoji(member)}
                             </span>
 
                             <span>
@@ -1103,9 +1098,7 @@ export default function FamilyCommunication() {
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <p className="text-base font-black text-gray-900">
-                  {getRoleEmoji(
-                    latestMySnap.sender?.role
-                  )}{" "}
+                  {getRoleEmoji(latestMySnap.sender)}{" "}
                   
                 </p>
 
@@ -1177,9 +1170,7 @@ export default function FamilyCommunication() {
             <div key={snap._id}>
               <div className="mb-3">
                 <p className="text-base font-black text-gray-900">
-                  {getRoleEmoji(
-                    snap.sender?.role
-                  )}{" "}
+                  {getRoleEmoji(snap.sender)}{" "}
                   {snap.sender?.fullName ||
                     "Family Member"}
                 </p>
