@@ -1,4 +1,5 @@
 import { Phone } from "lucide-react";
+import { getGenderAvatar } from "@/utils/genderAvatar";
 
 const getRelation = (member, position) => {
   if (position === "father") return "Father";
@@ -15,7 +16,7 @@ export default function FamilyContactCard({ member, position }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/80 text-lg shadow-sm">
-              {member?.role === "child" ? "🧒" : "👨‍👩‍👧"}
+              {getGenderAvatar(member)}
             </div>
 
             <div className="min-w-0">
