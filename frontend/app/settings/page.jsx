@@ -1,4 +1,5 @@
 "use client";
+import { getGenderAvatar } from "@/utils/genderAvatar";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -165,7 +166,7 @@ const Modal = ({
   onClose,
 }) => (
   <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 p-0 sm:items-center sm:p-4">
-    <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-[28px] bg-white p-5 shadow-2xl sm:rounded-[28px]">
+    <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-[28px] bg-white px-5 pb-24 pt-5 shadow-2xl sm:max-h-[90vh] sm:rounded-[28px] sm:pb-5">
       <div className="mb-5 flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900">
           {title}
@@ -191,6 +192,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [modal, setModal] = useState(null);
+  const [profileRequired, setProfileRequired] = useState(false);
 
   const [user, setUser] = useState({
     fullName: "",
@@ -271,20 +273,37 @@ export default function SettingsPage() {
           }
         );
 
+        const dateOfBirth =
+          data.parentProfile?.dateOfBirth ||
+          data.settings?.profile?.dateOfBirth ||
+          "";
+
+        const gender = data.user?.gender || "";
+
         setProfileForm({
           fullName: data.user?.fullName || "",
           phone: data.user?.phone || "",
-          dateOfBirth:
-            data.parentProfile?.dateOfBirth ||
-            data.settings?.profile?.dateOfBirth ||
-            "",
-          gender: data.user?.gender || "",
+          dateOfBirth,
+          gender,
         });
 
         setAccountForm({
           email: data.user?.email || "",
           phone: data.user?.phone || "",
         });
+
+        // DOB and gender are mandatory before entering the app.
+        // If either is missing, lock the user into the Profile modal.
+        const needsProfile =
+          (data.user?.role === "parent" ||
+            data.user?.role === "child" ||
+            data.user?.role === "provider") &&
+          (!gender || !dateOfBirth);
+
+        if (needsProfile) {
+          setProfileRequired(true);
+          setModal("profile");
+        }
       } catch (error) {
         toast.error(
           error.message || "Unable to load settings"
@@ -330,10 +349,32 @@ export default function SettingsPage() {
           profileForm.dateOfBirth,
       });
 
-      setModal(null);
       toast.success("Profile updated");
+
+      // After completing required profile setup,
+      // return to the correct dashboard.
+      const role =
+        user.role ||
+        localStorage.getItem("role");
+
+      setProfileRequired(false);
+      setModal(null);
+
+      setTimeout(() => {
+        if (role === "child") {
+          window.location.href = "/child/dashboard";
+        } else if (role === "parent") {
+          window.location.href = "/dashboard";
+        } else if (role === "provider") {
+          window.location.href = "/provider/dashboard";
+        }
+      }, 500);
     } catch (error) {
-      toast.error(error.message);
+      toast.error(
+        error.response?.data?.message ||
+          error.message ||
+          "Unable to update profile"
+      );
     } finally {
       setSaving(false);
     }
@@ -526,8 +567,14 @@ export default function SettingsPage() {
         <header className="mb-7">
           <div className="flex items-center gap-3">
             <Link
-              href={getBackHref()}
+              href={profileRequired ? "#" : getBackHref()}
               aria-label="Go back"
+              onClick={(event) => {
+                if (profileRequired) {
+                  event.preventDefault();
+                  toast.error("Please complete your profile first.");
+                }
+              }}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-gray-100 bg-white text-gray-700 shadow-sm active:scale-95"
             >
               <ArrowLeft
@@ -632,7 +679,14 @@ export default function SettingsPage() {
       {modal === "profile" && (
         <Modal
           title="Profile"
-          onClose={() => setModal(null)}
+          onClose={() => {
+            if (profileRequired) {
+              toast.error("Please complete your profile first.");
+              return;
+            }
+
+            setModal(null);
+          }}
         >
           <form
             onSubmit={saveProfile}
@@ -641,22 +695,12 @@ export default function SettingsPage() {
             {/* Gender Avatar */}
             <div className="flex justify-center pb-1">
               <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-[#f8f1ff] text-[#9b72c5]">
-                {profileForm.gender === "female" ? (
-                  <Venus
-                    className="h-10 w-10"
-                    strokeWidth={1.8}
-                  />
-                ) : profileForm.gender === "male" ? (
-                  <Mars
-                    className="h-10 w-10"
-                    strokeWidth={1.8}
-                  />
-                ) : (
-                  <UserRound
-                    className="h-10 w-10"
-                    strokeWidth={1.8}
-                  />
-                )}
+                <span className="text-5xl leading-none">
+                  {getGenderAvatar({
+                    role: user?.role,
+                    gender: profileForm.gender,
+                  })}
+                </span>
               </div>
             </div>
 
@@ -695,6 +739,7 @@ export default function SettingsPage() {
                   }))
                 }
                 className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-500 focus:border-purple-300"
+                required
               />
             </div>
 
@@ -1151,10 +1196,12 @@ export default function SettingsPage() {
         </Modal>
       )}
       {/* Settings Navigation */}
-      {user.role === "child" ? (
-        <ChildNavigation />
-      ) : (
-        <BottomNavigation />
+      {!profileRequired && (
+        user.role === "child" ? (
+          <ChildNavigation />
+        ) : (
+          <BottomNavigation />
+        )
       )}
     </main>
   );
