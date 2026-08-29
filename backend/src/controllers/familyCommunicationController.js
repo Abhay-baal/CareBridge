@@ -162,7 +162,7 @@ const getFamilyMembers = async (req, res) => {
 
     const members = await User.find({
       _id: { $in: ids },
-    }).select("_id fullName role");
+    }).select("_id fullName role gender");
 
     return res.status(200).json({
       success: true,
@@ -256,8 +256,8 @@ const sendFamilyMessage = async (req, res) => {
     const populated = await FamilyMessage.findById(
       created._id
     )
-      .populate("sender", "fullName role")
-      .populate("recipients", "fullName role");
+      .populate("sender", "fullName role gender")
+      .populate("recipients", "fullName role gender");
 
     const senderName =
       populated?.sender?.fullName || "Family update";
@@ -350,8 +350,8 @@ const getFamilyMessages = async (req, res) => {
         },
       ],
     })
-      .populate("sender", "fullName role")
-      .populate("recipients", "fullName role")
+      .populate("sender", "fullName role gender")
+      .populate("recipients", "fullName role gender")
       .sort({ createdAt: -1 })
       .limit(100);
 
@@ -528,7 +528,7 @@ const createFamilySnap = async (req, res) => {
         $in: createdSnaps.map((snap) => snap._id),
       },
     })
-      .populate("sender", "fullName role")
+      .populate("sender", "fullName role gender")
       .populate("recipient", "fullName role");
 
     const senderName =
@@ -599,7 +599,7 @@ const getFamilySnaps = async (req, res) => {
         $gt: new Date(),
       },
     })
-      .populate("sender", "fullName role")
+      .populate("sender", "fullName role gender")
       .populate("recipient", "fullName role")
       .sort({ createdAt: -1 });
 
