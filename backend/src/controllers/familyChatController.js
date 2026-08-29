@@ -98,7 +98,7 @@ const getFamilyChatMembers = async (req, res) => {
 
     const members = await User.find({
       _id: { $in: ids },
-    }).select("_id fullName email role");
+    }).select("_id fullName email role gender");
 
     return res.status(200).json({
       success: true,
