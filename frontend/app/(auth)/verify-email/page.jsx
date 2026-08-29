@@ -6,7 +6,10 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
-import { verifyEmail, requestEmailVerification } from "@/services/authService";
+import {
+  verifyEmail,
+  requestEmailVerification,
+} from "@/services/authService";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -23,10 +26,48 @@ export default function VerifyEmailPage() {
 
     try {
       setVerifying(true);
-      await verifyEmail({ email, code });
-      toast.success("Email verified successfully");
-      router.push("/login");
+
+      const response = await verifyEmail({
+        email: email.trim(),
+        code: code.trim(),
+      });
+
+      // Automatically log the newly registered user in.
+      if (response.token) {
+        localStorage.setItem("token", response.token);
+      }
+
+      const user = response.user || response.data;
+
+      if (user?.role) {
+        localStorage.setItem("role", user.role);
+      }
+
+      if (user?.id || user?._id) {
+        localStorage.setItem(
+          "userId",
+          user.id || user._id
+        );
+      }
+
+      if (user) {
+        localStorage.setItem("user", JSON.stringify(user));
+      }
+
+      toast.success("Email verified! Welcome to CareBridge 🎉");
+
+      if (user?.role === "child") {
+        router.push("/child/dashboard");
+      } else if (user?.role === "provider") {
+        router.push("/provider/dashboard");
+      } else if (user?.role === "parent") {
+        router.push("/dashboard");
+      } else {
+        toast.error("Invalid user role. Please contact support.");
+      }
     } catch (error) {
+      console.error("Email verification failed:", error);
+
       toast.error(
         error.response?.data?.message ||
           "Unable to verify email"
@@ -39,7 +80,11 @@ export default function VerifyEmailPage() {
   const handleResend = async () => {
     try {
       setSending(true);
-      await requestEmailVerification({ email });
+
+      await requestEmailVerification({
+        email: email.trim(),
+      });
+
       toast.success("Verification code sent again");
     } catch (error) {
       toast.error(
@@ -65,11 +110,15 @@ export default function VerifyEmailPage() {
           <h1 className="text-3xl font-bold text-gray-900">
             Verify email
           </h1>
+
           <p className="mt-2 text-sm text-gray-500">
             Enter the code we sent to your email address.
           </p>
 
-          <form onSubmit={handleVerify} className="mt-6 space-y-4">
+          <form
+            onSubmit={handleVerify}
+            className="mt-6 space-y-4"
+          >
             <Input
               label="Email"
               type="email"
