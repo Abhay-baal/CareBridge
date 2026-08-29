@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Activity,
   CalendarDays,
@@ -60,6 +64,25 @@ const problems = [
 ];
 
 export default function Home() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+
+    if (!token || !user?.role) {
+      return;
+    }
+
+    if (user.role === "child") {
+      router.replace("/child/dashboard");
+    } else if (user.role === "provider") {
+      router.replace("/provider/dashboard");
+    } else if (user.role === "parent") {
+      router.replace("/dashboard");
+    }
+  }, [router]);
+
   return (
     <main className="min-h-screen bg-white text-slate-900">
       {/* NAVBAR */}
