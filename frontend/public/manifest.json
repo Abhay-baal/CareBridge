@@ -2,7 +2,7 @@
   "name": "CareBridge",
   "short_name": "CareBridge",
   "description": "Healthcare Management Platform",
-  "start_url": "/",
+  "start_url": "/app-entry",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
