@@ -30,26 +30,136 @@ const createAuthCode = async ({ email, purpose }) => {
 };
 
 const sendOtpEmail = async ({ email, code, purpose }) => {
-  const subject =
-    purpose === "verify-email"
-      ? "Verify your CareBridge account"
-      : "Reset your CareBridge password";
+  const isVerification = purpose === "verify-email";
 
-  const intro =
-    purpose === "verify-email"
-      ? "Use this code to verify your CareBridge account."
-      : "Use this code to reset your CareBridge password.";
+  const subject = isVerification
+    ? "Verify your CareBridge account"
+    : "Reset your CareBridge password";
+
+  const title = isVerification
+    ? "Verify your account"
+    : "Reset your password";
+
+  const intro = isVerification
+    ? "Welcome to CareBridge. Please use the verification code below to confirm your email address."
+    : "We received a request to reset your CareBridge password. Use the code below to continue.";
+
+  const actionLabel = isVerification
+    ? "Your verification code"
+    : "Your reset code";
+
+  const text = `${title}
+
+${intro}
+
+${actionLabel}: ${code}
+
+This code expires in ${OTP_TTL_MINUTES} minutes.
+
+If you did not request this, you can safely ignore this email.
+
+CareBridge
+Family care, connected with love.`;
 
   const html = `
-    <div style="font-family: Arial, sans-serif; line-height: 1.5;">
-      <h2>${subject}</h2>
-      <p>${intro}</p>
-      <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px;">${code}</p>
-      <p>This code expires in ${OTP_TTL_MINUTES} minutes.</p>
-    </div>
-  `;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${subject}</title>
+</head>
 
-  const text = `${intro} Code: ${code}. It expires in ${OTP_TTL_MINUTES} minutes.`;
+<body style="margin:0;padding:0;background:#fff8fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#3f3438;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff8fa;padding:42px 16px;">
+    <tr>
+      <td align="center">
+
+        <table width="100%" cellpadding="0" cellspacing="0" border="0"
+          style="max-width:560px;background:#ffffff;border:1px solid #f3dfe4;border-radius:28px;overflow:hidden;box-shadow:0 18px 50px rgba(190,120,140,0.10);">
+
+          <tr>
+            <td style="padding:34px 36px 30px;background:#fff1f4;border-bottom:1px solid #f6e3e7;">
+
+              <div style="width:44px;height:44px;line-height:44px;text-align:center;background:#fce3e9;border-radius:15px;font-size:22px;">
+                🌸
+              </div>
+
+              <div style="margin-top:18px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#c87589;">
+                CareBridge
+              </div>
+
+              <div style="margin-top:8px;font-size:28px;line-height:36px;font-weight:700;color:#3f3438;">
+                ${title}
+              </div>
+
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:34px 36px 36px;">
+
+              <p style="margin:0;font-size:15px;line-height:25px;color:#78666c;">
+                ${intro}
+              </p>
+
+              <div style="margin-top:28px;padding:24px 20px;text-align:center;background:#fff9fa;border:1px solid #f2dfe4;border-radius:20px;">
+
+                <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#b28a94;">
+                  ${actionLabel}
+                </div>
+
+                <div style="margin-top:13px;font-size:34px;line-height:42px;font-weight:700;letter-spacing:8px;color:#b95f76;padding-left:8px;">
+                  ${code}
+                </div>
+
+              </div>
+
+              <div style="margin-top:20px;padding:14px 16px;background:#fff5f7;border-radius:14px;text-align:center;">
+                <p style="margin:0;font-size:12px;line-height:20px;color:#9a7e86;">
+                  This code expires in
+                  <strong style="color:#765963;">
+                    ${OTP_TTL_MINUTES} minutes
+                  </strong>.
+                </p>
+              </div>
+
+              <p style="margin:26px 0 0;font-size:12px;line-height:20px;color:#a18d93;">
+                If you didn't request this email, you can safely ignore it.
+                Your account remains secure.
+              </p>
+
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:22px 36px;background:#fffafb;border-top:1px solid #f5e7ea;text-align:center;">
+
+              <div style="font-size:13px;font-weight:700;color:#8c6570;">
+                CareBridge
+              </div>
+
+              <div style="margin-top:5px;font-size:11px;color:#b29da3;">
+                Family care, connected with love.
+              </div>
+
+            </td>
+          </tr>
+
+        </table>
+
+        <p style="margin:18px 0 0;font-size:10px;line-height:17px;color:#b8a5aa;text-align:center;">
+          This is an automated email from CareBridge. Please do not reply to this message.
+        </p>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
+  `;
 
   return sendEmail({
     to: email,
@@ -58,6 +168,7 @@ const sendOtpEmail = async ({ email, code, purpose }) => {
     html,
   });
 };
+
 
 const registerUser = async (req, res) => {
   try {
@@ -339,10 +450,30 @@ const verifyEmail = async (req, res) => {
       { new: true }
     ).select("-password");
 
+    const token = jwt.sign(
+      {
+        id: user._id,
+        role: user.role,
+        parent: user.parent || null,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: process.env.JWT_EXPIRES_IN,
+      }
+    );
+
     return res.status(200).json({
       success: true,
       message: "Email verified successfully",
-      data: user,
+      token,
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+        parent: user.parent || null,
+        isVerified: user.isVerified,
+      },
     });
   } catch (error) {
     console.error("Verify email error:", error);
