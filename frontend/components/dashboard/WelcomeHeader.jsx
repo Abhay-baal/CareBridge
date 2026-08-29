@@ -1,12 +1,8 @@
-export default function WelcomeHeader({ name }) {
+export default function WelcomeHeader() {
   return (
-    <div className="mb-6">
-      <p className="text-gray-600">
-        Good Morning 👋
-      </p>
-
-      <h1 className="text-2xl font-bold text-gray-900">
-        Hi, {name}
+    <div className="mb-0">
+      <h1 className="text-3xl font-extrabold text-gray-900">
+        Hello 👋
       </h1>
     </div>
   );
