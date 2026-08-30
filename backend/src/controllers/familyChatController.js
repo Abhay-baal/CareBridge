@@ -68,8 +68,8 @@ const validateMessage = ({
       return "Invalid snap image";
     }
 
-    if (snapData.length > 1500000) {
-      return "Snap is too large. Please choose a smaller image.";
+    if (snapData.length > 2000000) {
+      return "Snap is too large. Please try a smaller image.";
     }
   }
 
