@@ -25,6 +25,19 @@ export default function ChildDashboard() {
     } catch (err) {
       console.error("Child dashboard error:", err);
 
+      if (
+        err.response?.data?.message
+          ?.toLowerCase()
+          .includes("no active parent")
+      ) {
+        setData({
+          parent: null,
+          carePlans: [],
+          appointments: [],
+        });
+        return;
+      }
+
       setError(
         err.response?.data?.message ||
           "Unable to load child dashboard"
