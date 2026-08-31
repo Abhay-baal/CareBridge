@@ -43,7 +43,8 @@ const getChildDashboard = async (req, res) => {
     if (!parent) {
       return res.status(404).json({
         success: false,
-        message: "No active parent found",
+        message:
+          "No active parent found. Join your parent's family using a family code to continue.",
       });
     }
 
