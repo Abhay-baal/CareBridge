@@ -56,11 +56,11 @@ export default function VerifyEmailPage() {
 
       toast.success("Email verified! Welcome to CareBridge 🎉");
 
-      if (user?.role === "child") {
-        router.push("/app-entry");
-      } else if (user?.role === "provider") {
-        router.push("/app-entry");
-      } else if (user?.role === "parent") {
+      if (
+        user?.role === "child" ||
+        user?.role === "provider" ||
+        user?.role === "parent"
+      ) {
         router.push("/settings");
       } else {
         toast.error("Invalid user role. Please contact support.");
