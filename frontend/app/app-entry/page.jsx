@@ -17,15 +17,16 @@ export default function AppEntryPage() {
       return;
     }
 
-    if (user.role === "child") {
-      router.replace("/child/dashboard");
-    } else if (user.role === "provider") {
-      router.replace("/provider/dashboard");
-    } else if (user.role === "parent") {
-      router.replace("/dashboard");
-    } else {
-      router.replace("/");
+    if (
+      user.role === "child" ||
+      user.role === "provider" ||
+      user.role === "parent"
+    ) {
+      router.replace("/settings");
+      return;
     }
+
+    router.replace("/");
   }, [router]);
 
   return null;
