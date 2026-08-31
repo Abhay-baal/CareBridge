@@ -559,7 +559,7 @@ export default function FamilyPage() {
                         : "border-[#f3e3e5] bg-[#fffafb] text-[#182033] hover:border-[#e7c5cb]"
                     }`}
                   >
-                    <span className="text-xl">{getGenderAvatar(family.father)}</span>
+                    <span className="text-xl">{getGenderAvatar(family?.father)}</span>
                     <p className="mt-1 text-sm font-black">
                       Father
                     </p>
@@ -574,7 +574,7 @@ export default function FamilyPage() {
                         : "border-[#f3e3e5] bg-[#fffafb] text-[#182033] hover:border-[#e7c5cb]"
                     }`}
                   >
-                    <span className="text-xl">{getGenderAvatar(family.mother)}</span>
+                    <span className="text-xl">{getGenderAvatar(family?.mother)}</span>
                     <p className="mt-1 text-sm font-black">
                       Mother
                     </p>
