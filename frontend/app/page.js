@@ -67,20 +67,43 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const user = JSON.parse(localStorage.getItem("user") || "null");
+    let cancelled = false;
 
-    if (!token || !user?.role) {
-      return;
-    }
+    const routeAuthenticatedUser = () => {
+      const token = localStorage.getItem("token");
 
-    if (user.role === "child") {
-      router.replace("/child/dashboard");
-    } else if (user.role === "provider") {
-      router.replace("/provider/dashboard");
-    } else if (user.role === "parent") {
-      router.replace("/dashboard");
-    }
+      let user = null;
+
+      try {
+        user = JSON.parse(
+          localStorage.getItem("user") || "null"
+        );
+      } catch {
+        user = null;
+      }
+
+      if (!token || !user?.role) {
+        return;
+      }
+
+      if (cancelled) {
+        return;
+      }
+
+      if (user.role === "child") {
+        router.replace("/child/dashboard");
+      } else if (user.role === "provider") {
+        router.replace("/provider/dashboard");
+      } else if (user.role === "parent") {
+        router.replace("/dashboard");
+      }
+    };
+
+    routeAuthenticatedUser();
+
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   return (
