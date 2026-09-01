@@ -225,7 +225,7 @@ export default function FamilyPage() {
               {family.father && (
                 <div className="flex items-center gap-3 rounded-xl border border-[#f8eaec] bg-[#fffafb] p-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#fff0f2] text-xl">
-                    {getGenderAvatar(family.father)}
+                    {getGenderAvatar(family?.father)}
                   </div>
 
                   <div>
@@ -242,7 +242,7 @@ export default function FamilyPage() {
               {family.mother && (
                 <div className="flex items-center gap-3 rounded-xl border border-[#f8eaec] bg-[#fffafb] p-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#fff0f2] text-xl">
-                    {getGenderAvatar(family.mother)}
+                    {getGenderAvatar(family?.mother)}
                   </div>
 
                   <div>
@@ -442,7 +442,7 @@ export default function FamilyPage() {
                         : "border-[#f3e3e5] bg-[#fffafb] text-[#182033] hover:border-[#e7c5cb]"
                     }`}
                   >
-                    <div className="text-2xl">{getGenderAvatar(family.father)}</div>
+                    <div className="text-2xl">{getGenderAvatar(family?.father)}</div>
                     <p className="mt-2 text-sm font-black">
                       Father
                     </p>
@@ -457,7 +457,7 @@ export default function FamilyPage() {
                         : "border-[#f3e3e5] bg-[#fffafb] text-[#182033] hover:border-[#e7c5cb]"
                     }`}
                   >
-                    <div className="text-2xl">{getGenderAvatar(family.mother)}</div>
+                    <div className="text-2xl">{getGenderAvatar(family?.mother)}</div>
                     <p className="mt-2 text-sm font-black">
                       Mother
                     </p>
