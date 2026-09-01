@@ -5,19 +5,23 @@ export const getMyFamily = async () => {
   return response.data;
 };
 
-export const createFamily = async (position = null) => {
+export const createFamily = async (familyName) => {
   const response = await api.post("/family/create", {
-    ...(position ? { position } : {}),
+    familyName,
   });
 
   return response.data;
 };
 
-export const joinFamily = async (familyCode, position = null) => {
+export const joinFamily = async (familyCode) => {
   const response = await api.post("/family/join", {
     familyCode,
-    ...(position ? { position } : {}),
   });
 
+  return response.data;
+};
+
+export const leaveFamily = async () => {
+  const response = await api.post("/family/leave");
   return response.data;
 };

@@ -11,6 +11,13 @@ const familySchema = new mongoose.Schema(
       index: true,
     },
 
+    familyName: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 80,
+    },
+
     father: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

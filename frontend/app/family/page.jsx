@@ -10,6 +10,7 @@ import {
   createFamily,
   getMyFamily,
   joinFamily,
+  leaveFamily,
 } from "@/services/familyService";
 
 const getLoggedInRole = () => {
@@ -40,8 +41,9 @@ const getLoggedInRole = () => {
 export default function FamilyPage() {
   const router = useRouter();
   const [mode, setMode] = useState(null);
-  const [position, setPosition] = useState("");
+  const [familyName, setFamilyName] = useState("");
   const [familyCode, setFamilyCode] = useState("");
+  const [leaving, setLeaving] = useState(false);
 
   const [role, setRole] = useState(null);
   const [family, setFamily] = useState(null);
@@ -82,7 +84,7 @@ export default function FamilyPage() {
 
   const reset = () => {
     setMode(null);
-    setPosition("");
+    setFamilyName("");
     setFamilyCode("");
     setError("");
   };
@@ -95,21 +97,19 @@ export default function FamilyPage() {
       return;
     }
 
-    if (role === "parent" && !position) {
-      setError("Please choose Father or Mother.");
+    if (!familyName.trim()) {
+      setError("Please enter a family name.");
       return;
     }
 
     setSubmitting(true);
 
     try {
-      const result = await createFamily(
-        role === "parent" ? position : null
-      );
+      const result = await createFamily(familyName.trim());
 
       setFamily(result.data);
       setMode(null);
-      setPosition("");
+      setFamilyName("");
     } catch (err) {
       setError(
         err?.response?.data?.message ||
@@ -133,22 +133,13 @@ export default function FamilyPage() {
       return;
     }
 
-    if (role === "parent" && !position) {
-      setError("Please choose Father or Mother.");
-      return;
-    }
-
     setSubmitting(true);
 
     try {
-      const result = await joinFamily(
-        familyCode.trim(),
-        role === "parent" ? position : null
-      );
+      const result = await joinFamily(familyCode.trim());
 
       setFamily(result.data);
       setMode(null);
-      setPosition("");
       setFamilyCode("");
     } catch (err) {
       setError(
@@ -157,6 +148,30 @@ export default function FamilyPage() {
       );
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleLeave = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to leave this family?"
+    );
+
+    if (!confirmed) return;
+
+    setError("");
+    setLeaving(true);
+
+    try {
+      await leaveFamily();
+      setFamily(null);
+      setMode(null);
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          "Unable to leave family."
+      );
+    } finally {
+      setLeaving(false);
     }
   };
 
@@ -213,7 +228,7 @@ export default function FamilyPage() {
               </h1>
 
               <p className="text-xs font-medium text-rose-400">
-                Your family connection
+                {family?.familyName || "Your family connection"}
               </p>
             </div>
 
@@ -323,6 +338,21 @@ export default function FamilyPage() {
 
             </div>
           </div>
+
+          {error && (
+            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleLeave}
+            disabled={leaving}
+            className="mt-4 w-full rounded-2xl border border-red-200 bg-white px-4 py-3.5 text-sm font-black text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {leaving ? "Leaving Family..." : "Leave Family"}
+          </button>
         </div>
       </main>
     );
@@ -452,6 +482,23 @@ export default function FamilyPage() {
               ← Back
             </button>
 
+            <div className="mt-6">
+              <label className="text-xs font-bold uppercase tracking-wide text-[#b38c94]">
+                Family Name
+              </label>
+
+              <input
+                type="text"
+                value={familyName}
+                onChange={(event) =>
+                  setFamilyName(event.target.value.slice(0, 80))
+                }
+                placeholder="e.g. Sharma Family"
+                maxLength={80}
+                className="mt-2 w-full rounded-xl border border-[#ead3d7] bg-[#fffafb] px-4 py-3.5 text-base font-bold text-[#182033] outline-none transition placeholder:text-[#e8cdd2] focus:border-[#ffb1be] focus:ring-2 focus:ring-[#ffecef]"
+              />
+            </div>
+
             <div className="text-center">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#fff0f2] text-2xl">
                 🏡
@@ -471,44 +518,18 @@ export default function FamilyPage() {
             </div>
 
             {role === "parent" && (
-              <div className="mt-6">
-                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-rose-400">
-                  Your position
+              <div className="mt-6 rounded-xl border border-[#f3e3e5] bg-[#fffafb] p-4 text-center">
+                <p className="text-2xl">
+                  {getGenderAvatar({ gender: "male" })}
                 </p>
 
-                <div className="grid grid-cols-2 gap-3">
+                <p className="mt-2 text-sm font-black text-[#182033]">
+                  Your parent role is automatic
+                </p>
 
-                  <button
-                    type="button"
-                    onClick={() => setPosition("father")}
-                    className={`rounded-2xl border px-4 py-5 transition ${
-                      position === "father"
-                        ? "border-[#ff7f96] bg-[#ff8fa3] text-white"
-                        : "border-[#f3e3e5] bg-[#fffafb] text-[#182033] hover:border-[#e7c5cb]"
-                    }`}
-                  >
-                    <div className="text-2xl">{getGenderAvatar(family?.father)}</div>
-                    <p className="mt-2 text-sm font-black">
-                      Father
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPosition("mother")}
-                    className={`rounded-2xl border px-4 py-5 transition ${
-                      position === "mother"
-                        ? "border-[#ff7f96] bg-[#ff8fa3] text-white"
-                        : "border-[#f3e3e5] bg-[#fffafb] text-[#182033] hover:border-[#e7c5cb]"
-                    }`}
-                  >
-                    <div className="text-2xl">{getGenderAvatar(family?.mother)}</div>
-                    <p className="mt-2 text-sm font-black">
-                      Mother
-                    </p>
-                  </button>
-
-                </div>
+                <p className="mt-1 text-xs font-medium text-rose-400">
+                  Your gender determines whether you are Father or Mother.
+                </p>
               </div>
             )}
 
@@ -531,7 +552,7 @@ export default function FamilyPage() {
               onClick={handleCreate}
               disabled={
                 submitting ||
-                (role === "parent" && !position)
+                !familyName.trim()
               }
               className="mt-6 w-full rounded-2xl bg-[#FF8FA3] px-4 py-3.5 text-sm font-black text-white transition hover:bg-[#FF7F96] disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -588,44 +609,16 @@ export default function FamilyPage() {
             </div>
 
             {role === "parent" && (
-              <div className="mt-5">
-                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-rose-400">
-                  Your position
+              <div className="mt-5 rounded-xl border border-[#f3e3e5] bg-[#fffafb] p-4 text-center">
+                <p className="text-2xl">👨‍👩‍👧</p>
+
+                <p className="mt-2 text-sm font-black text-[#182033]">
+                  Parent role is detected automatically
                 </p>
 
-                <div className="grid grid-cols-2 gap-3">
-
-                  <button
-                    type="button"
-                    onClick={() => setPosition("father")}
-                    className={`rounded-2xl border px-4 py-4 transition ${
-                      position === "father"
-                        ? "border-[#ff7f96] bg-[#ff8fa3] text-white"
-                        : "border-[#f3e3e5] bg-[#fffafb] text-[#182033] hover:border-[#e7c5cb]"
-                    }`}
-                  >
-                    <span className="text-xl">{getGenderAvatar(family?.father)}</span>
-                    <p className="mt-1 text-sm font-black">
-                      Father
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPosition("mother")}
-                    className={`rounded-2xl border px-4 py-4 transition ${
-                      position === "mother"
-                        ? "border-[#ff7f96] bg-[#ff8fa3] text-white"
-                        : "border-[#f3e3e5] bg-[#fffafb] text-[#182033] hover:border-[#e7c5cb]"
-                    }`}
-                  >
-                    <span className="text-xl">{getGenderAvatar(family?.mother)}</span>
-                    <p className="mt-1 text-sm font-black">
-                      Mother
-                    </p>
-                  </button>
-
-                </div>
+                <p className="mt-1 text-xs font-medium text-rose-400">
+                  Male accounts join as Father. Female accounts join as Mother.
+                </p>
               </div>
             )}
 
@@ -642,8 +635,7 @@ export default function FamilyPage() {
               onClick={handleJoin}
               disabled={
                 submitting ||
-                familyCode.length !== 6 ||
-                (role === "parent" && !position)
+                familyCode.length !== 6
               }
               className="mt-5 w-full rounded-2xl bg-[#FF8FA3] px-4 py-3.5 text-sm font-black text-white transition hover:bg-[#FF7F96] disabled:cursor-not-allowed disabled:opacity-40"
             >

@@ -21,6 +21,7 @@ const {
   getMyFamily,
   createFamily,
   joinFamily,
+  leaveFamily,
 } = require("../controllers/familyController");
 
 const {
@@ -55,6 +56,11 @@ router.post(
 router.post(
   "/join",
   joinFamily
+);
+
+router.post(
+  "/leave",
+  leaveFamily
 );
 
 /*
