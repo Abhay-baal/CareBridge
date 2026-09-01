@@ -14,21 +14,25 @@ const {
   authorize,
 } = require("../middleware/authMiddleware");
 
-// ------------------------------------------------------------
-// Create
-// Parent -> Child
-// ------------------------------------------------------------
+/*
+ * UNIVERSAL CARE
+ *
+ * Parent + Child may create care.
+ *
+ * Recipient can be:
+ *   Parent
+ *   Child
+ *
+ * Same-family validation is performed by the controller.
+ */
+
 router.post(
   "/",
   authenticate,
-  authorize("parent"),
+  authorize("parent", "child"),
   createCarePlan
 );
 
-// ------------------------------------------------------------
-// Family-wide Care feed
-// Parent + Child
-// ------------------------------------------------------------
 router.get(
   "/",
   authenticate,
@@ -36,10 +40,6 @@ router.get(
   getCarePlans
 );
 
-// ------------------------------------------------------------
-// Update
-// Parent + Child
-// ------------------------------------------------------------
 router.put(
   "/:id",
   authenticate,
@@ -47,10 +47,6 @@ router.put(
   updateCarePlan
 );
 
-// ------------------------------------------------------------
-// Delete
-// Creator only is enforced by controller.
-// ------------------------------------------------------------
 router.delete(
   "/:id",
   authenticate,

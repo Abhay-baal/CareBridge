@@ -2,6 +2,58 @@ const CarePlan = require("../models/CarePlan");
 const Parent = require("../models/Parent");
 const ParentChild = require("../models/ParentChild");
 const User = require("../models/User");
+const Family = require("../models/Family");
+
+/*
+ * ------------------------------------------------------------
+ * USER / FAMILY HELPERS
+ * ------------------------------------------------------------
+ */
+
+const normalizeId = (value) => {
+  if (!value) return null;
+
+  if (value._id) {
+    return value._id.toString();
+  }
+
+  return value.toString();
+};
+
+const getFamilyForUser = async (userId) => {
+  return Family.findOne({
+    $or: [
+      { father: userId },
+      { mother: userId },
+      { children: userId },
+    ],
+  });
+};
+
+const isUserInFamily = (family, userId) => {
+  if (!family || !userId) return false;
+
+  const target = userId.toString();
+
+  if (
+    family.father &&
+    family.father.toString() === target
+  ) {
+    return true;
+  }
+
+  if (
+    family.mother &&
+    family.mother.toString() === target
+  ) {
+    return true;
+  }
+
+  return (family.children || []).some(
+    (child) =>
+      child.toString() === target
+  );
+};
 
 const getParentProfile = async (userId) => {
   return Parent.findOne({
@@ -9,390 +61,637 @@ const getParentProfile = async (userId) => {
   });
 };
 
-const getConnectedRelationship = async (parentUserId, childId) => {
+/*
+ * Find the old ParentChild relationship when one exists.
+ *
+ * Parent -> Child
+ * Child -> Parent
+ *
+ * Parent -> Parent and Child -> Child intentionally have
+ * no ParentChild relationship and therefore return null.
+ */
+const getRelationshipBetweenUsers = async (
+  userA,
+  userB
+) => {
   return ParentChild.findOne({
-    parent: parentUserId,
-    child: childId,
+    $or: [
+      {
+        parent: userA,
+        child: userB,
+      },
+      {
+        parent: userB,
+        child: userA,
+      },
+    ],
   });
 };
 
-// ============================================================
-// FIND ALL PARENT-CHILD RELATIONSHIPS BELONGING TO THE USER'S
-// FAMILY.
-//
-// A family can contain:
-//   Parent A
-//   Parent B
-//   Child A
-//   Child B
-//
-// We start from the logged-in user and expand through the
-// ParentChild relationship graph so Care can show every family
-// care activity.
-// ============================================================
-const getFamilyRelationships = async (userId, role) => {
-  const relationshipIds = new Set();
-  const parentIds = new Set();
-  const childIds = new Set();
-
-  if (role === "parent") {
-    parentIds.add(userId);
-  } else {
-    childIds.add(userId);
-  }
-
-  // ----------------------------------------------------------
-  // Start with direct relationships.
-  // ----------------------------------------------------------
-  let relationships = await ParentChild.find({
-    $or:
-      role === "parent"
-        ? [{ parent: userId }]
-        : [{ child: userId }],
-  }).select("_id parent child");
-
-  for (const relationship of relationships) {
-    relationshipIds.add(relationship._id.toString());
-    parentIds.add(relationship.parent.toString());
-    childIds.add(relationship.child.toString());
-  }
-
-  // ----------------------------------------------------------
-  // Expand parent -> children.
-  // ----------------------------------------------------------
-  if (parentIds.size > 0) {
-    relationships = await ParentChild.find({
-      parent: {
-        $in: [...parentIds],
-      },
-    }).select("_id parent child");
-
-    for (const relationship of relationships) {
-      relationshipIds.add(relationship._id.toString());
-      parentIds.add(relationship.parent.toString());
-      childIds.add(relationship.child.toString());
-    }
-  }
-
-  // ----------------------------------------------------------
-  // Expand children -> all parents.
-  // This is what allows Mom + Dad + children to appear in
-  // the same family Care feed.
-  // ----------------------------------------------------------
-  if (childIds.size > 0) {
-    relationships = await ParentChild.find({
-      child: {
-        $in: [...childIds],
-      },
-    }).select("_id parent child");
-
-    for (const relationship of relationships) {
-      relationshipIds.add(relationship._id.toString());
-      parentIds.add(relationship.parent.toString());
-      childIds.add(relationship.child.toString());
-    }
-  }
-
-  // ----------------------------------------------------------
-  // One final parent expansion catches additional children
-  // belonging to any parent discovered above.
-  // ----------------------------------------------------------
-  if (parentIds.size > 0) {
-    relationships = await ParentChild.find({
-      parent: {
-        $in: [...parentIds],
-      },
-    }).select("_id parent child");
-
-    for (const relationship of relationships) {
-      relationshipIds.add(relationship._id.toString());
-      parentIds.add(relationship.parent.toString());
-      childIds.add(relationship.child.toString());
-    }
-  }
-
-  return {
-    relationshipIds: [...relationshipIds],
-    parentIds: [...parentIds],
-    childIds: [...childIds],
-  };
-};
-
-// ============================================================
-// CREATE CARE PLAN
-// Parent -> Child
-// ============================================================
+/*
+ * ------------------------------------------------------------
+ * CREATE UNIVERSAL CARE PLAN
+ * ------------------------------------------------------------
+ *
+ * Any family member can create care for any other family member.
+ */
 const createCarePlan = async (req, res) => {
   try {
     const {
       title,
       description,
       dueDate,
+      recipientId,
       childId,
+      parentId,
       careType,
       walkLevel,
       walkDuration,
     } = req.body;
 
-    if (!title || !dueDate || !childId) {
+    /*
+     * recipientId is the new universal field.
+     *
+     * childId / parentId are accepted for backward compatibility.
+     */
+    const targetRecipientId =
+      recipientId ||
+      childId ||
+      parentId;
+
+    if (!title || !targetRecipientId) {
       return res.status(400).json({
         success: false,
-        message: "Title, due date and child are required",
+        message:
+          "Title and recipient are required",
       });
     }
 
-    const parent = await getParentProfile(req.user.id);
+    const creatorId =
+      req.user.id.toString();
 
-    if (!parent) {
-      return res.status(404).json({
+    const recipientIdString =
+      targetRecipientId.toString();
+
+    /*
+     * Prevent assigning care to yourself.
+     */
+    if (
+      creatorId ===
+      recipientIdString
+    ) {
+      return res.status(400).json({
         success: false,
-        message: "Parent profile not found",
+        message:
+          "You cannot assign care to yourself",
       });
     }
 
-    const child = await User.findOne({
-      _id: childId,
-      role: "child",
-    });
+    /*
+     * Find creator's family.
+     */
+    const family =
+      await getFamilyForUser(
+        creatorId
+      );
 
-    if (!child) {
-      return res.status(404).json({
-        success: false,
-        message: "Child not found",
-      });
-    }
-
-    const relationship = await getConnectedRelationship(
-      req.user.id,
-      child._id
-    );
-
-    if (!relationship) {
+    if (!family) {
       return res.status(403).json({
         success: false,
-        message: "This child is not connected to your family",
+        message:
+          "You are not connected to a family",
       });
     }
 
-    const carePlan = await CarePlan.create({
-      createdBy: req.user.id,
-      parent: parent._id,
-      child: child._id,
-      parentChild: relationship._id,
-      title: title.trim(),
-      description: description?.trim() || "",
-      dueDate,
-      careType: careType || "task",
+    /*
+     * Make absolutely sure the recipient belongs to the
+     * SAME family.
+     */
+    if (
+      !isUserInFamily(
+        family,
+        recipientIdString
+      )
+    ) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "You can only assign care to someone in your family",
+      });
+    }
+
+    /*
+     * Confirm recipient actually exists.
+     */
+    const recipient =
+      await User.findById(
+        recipientIdString
+      ).select(
+        "_id fullName email phone role"
+      );
+
+    if (!recipient) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "Recipient not found",
+      });
+    }
+
+    if (
+      !["parent", "child"].includes(
+        recipient.role
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid care recipient",
+      });
+    }
+
+    /*
+     * If this is a Parent <-> Child assignment, preserve
+     * the existing relationship fields.
+     */
+    const relationship =
+      await getRelationshipBetweenUsers(
+        creatorId,
+        recipientIdString
+      );
+
+    let parentProfile = null;
+    let parentUserId = null;
+    let childUserId = null;
+
+    if (relationship) {
+      parentUserId =
+        relationship.parent.toString();
+
+      childUserId =
+        relationship.child.toString();
+
+      parentProfile =
+        await getParentProfile(
+          parentUserId
+        );
+    }
+
+    /*
+     * If the recipient is a parent, we can also resolve their
+     * Parent profile for legacy compatibility.
+     */
+    if (
+      recipient.role ===
+      "parent"
+    ) {
+      parentProfile =
+        parentProfile ||
+        (await getParentProfile(
+          recipientIdString
+        ));
+    }
+
+    /*
+     * Optional due date.
+     *
+     * No date/time means null.
+     */
+    let normalizedDueDate = null;
+
+    if (
+      dueDate !== undefined &&
+      dueDate !== null &&
+      dueDate !== ""
+    ) {
+      const parsedDate =
+        new Date(dueDate);
+
+      if (
+        Number.isNaN(
+          parsedDate.getTime()
+        )
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid due date",
+        });
+      }
+
+      normalizedDueDate =
+        parsedDate;
+    }
+
+    /*
+     * Walk validation.
+     */
+    const normalizedCareType =
+      careType === "walk"
+        ? "walk"
+        : "task";
+
+    if (
+      normalizedCareType ===
+      "walk"
+    ) {
+      if (
+        !walkLevel ||
+        !walkDuration
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Walk level and duration are required",
+        });
+      }
+    }
+
+    const carePlanData = {
+      createdBy: creatorId,
+
+      recipient:
+        recipient._id,
+
+      recipientRole:
+        recipient.role,
+
+      family:
+        family._id,
+
+      title:
+        String(title).trim(),
+
+      description:
+        description
+          ? String(description).trim()
+          : "",
+
+      careType:
+        normalizedCareType,
+
+      dueDate:
+        normalizedDueDate,
+
       walkLevel:
-        careType === "walk"
+        normalizedCareType ===
+        "walk"
           ? walkLevel
           : undefined,
+
       walkDuration:
-        careType === "walk"
+        normalizedCareType ===
+        "walk"
           ? walkDuration
           : undefined,
-    });
+    };
 
-    const populatedCarePlan = await CarePlan.findById(
-      carePlan._id
-    )
-      .populate(
-        "createdBy",
-        "fullName email phone role"
+    /*
+     * Preserve old ParentChild data whenever this is a
+     * Parent <-> Child assignment.
+     */
+    if (relationship) {
+      /*
+       * Parent <-> Child assignment.
+       *
+       * Preserve the existing ParentChild relationship fields
+       * for legacy compatibility and existing UI/data.
+       */
+      carePlanData.parentChild =
+        relationship._id;
+
+      carePlanData.child =
+        childUserId;
+
+      if (parentProfile) {
+        carePlanData.parent =
+          parentProfile._id;
+      }
+    } else {
+      /*
+       * Universal family assignment:
+       *
+       * Parent  -> Parent
+       * Child   -> Child
+       *
+       * These pairs do NOT have a ParentChild relationship.
+       *
+       * They are authorized because both users were already
+       * verified above to belong to the SAME Family.
+       *
+       * Therefore:
+       *   recipient + family
+       * are sufficient.
+       *
+       * Do NOT reject Child -> Child here.
+       */
+    }
+    const carePlan =
+      await CarePlan.create(
+        carePlanData
+      );
+
+    const populatedCarePlan =
+      await CarePlan.findById(
+        carePlan._id
       )
-      .populate(
-        "child",
-        "fullName email phone role"
-      )
-      .populate({
-        path: "parent",
-        populate: {
-          path: "user",
-          select: "fullName email phone role",
-        },
-      })
-      .populate("parentChild");
+        .populate(
+          "createdBy",
+          "fullName email phone role"
+        )
+        .populate(
+          "recipient",
+          "fullName email phone role"
+        )
+        .populate(
+          "child",
+          "fullName email phone role"
+        )
+        .populate({
+          path: "parent",
+          populate: {
+            path: "user",
+            select:
+              "fullName email phone role",
+          },
+        })
+        .populate(
+          "parentChild"
+        )
+        .populate(
+          "family"
+        );
 
     return res.status(201).json({
       success: true,
-      message: "Care plan created successfully",
-      data: populatedCarePlan,
+      message:
+        "Care plan created successfully",
+      data:
+        populatedCarePlan,
     });
   } catch (error) {
-    console.error("Create care plan error:", error);
+    console.error(
+      "Create universal care plan error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Server Error",
+      message:
+        "Server Error",
     });
   }
 };
 
-// ============================================================
-// GET CARE PLANS
-//
-// BOTH PARENT AND CHILD.
-//
-// Returns every CarePlan belonging to the logged-in user's
-// family.
-//
-// This powers:
-//   All Tasks
-//   Given to Me
-//   Given by Me
-//
-// Filtering is performed on the frontend using createdBy and
-// the populated parent/child users.
-// ============================================================
-const getCarePlans = async (req, res) => {
+/*
+ * ------------------------------------------------------------
+ * GET FAMILY CARE PLANS
+ * ------------------------------------------------------------
+ */
+const getCarePlans = async (
+  req,
+  res
+) => {
   try {
-    const {
-      relationshipIds,
-    } = await getFamilyRelationships(
-      req.user.id,
-      req.user.role
-    );
+    const family =
+      await getFamilyForUser(
+        req.user.id
+      );
 
-    if (relationshipIds.length === 0) {
+    if (!family) {
       return res.status(200).json({
         success: true,
         data: [],
       });
     }
 
-    const carePlans = await CarePlan.find({
-      parentChild: {
-        $in: relationshipIds,
-      },
-    })
-      .populate(
-        "createdBy",
-        "fullName email phone role"
-      )
-      .populate(
-        "child",
-        "fullName email phone role"
-      )
-      .populate({
-        path: "parent",
-        populate: {
-          path: "user",
-          select: "fullName email phone role",
-        },
+    const carePlans =
+      await CarePlan.find({
+        family:
+          family._id,
       })
-      .populate("parentChild")
-      .sort({
-        dueDate: 1,
-        createdAt: -1,
-      });
+        .populate(
+          "createdBy",
+          "fullName email phone role"
+        )
+        .populate(
+          "recipient",
+          "fullName email phone role"
+        )
+        .populate(
+          "child",
+          "fullName email phone role"
+        )
+        .populate({
+          path: "parent",
+          populate: {
+            path: "user",
+            select:
+              "fullName email phone role",
+          },
+        })
+        .populate(
+          "parentChild"
+        )
+        .populate(
+          "family"
+        )
+        .sort({
+          dueDate: 1,
+          createdAt: -1,
+        });
 
     return res.status(200).json({
       success: true,
       data: carePlans,
     });
   } catch (error) {
-    console.error("Get family care plans error:", error);
+    console.error(
+      "Get family care plans error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Server Error",
+      message:
+        "Server Error",
     });
   }
 };
 
-// ============================================================
-// UPDATE CARE PLAN
-//
-// A user may update a CarePlan when:
-//
-// 1. They created it.
-// 2. They are the child recipient.
-// 3. They are the parent recipient.
-//
-// This keeps the existing parent behavior while allowing a
-// parent to complete a task/walk that was given TO them by a
-// child.
-// ============================================================
-const updateCarePlan = async (req, res) => {
+/*
+ * ------------------------------------------------------------
+ * UPDATE CARE PLAN
+ * ------------------------------------------------------------
+ *
+ * Creator OR recipient can update it.
+ */
+const updateCarePlan = async (
+  req,
+  res
+) => {
   try {
-    const carePlan = await CarePlan.findById(
-      req.params.id
-    ).populate({
-      path: "parent",
-      populate: {
-        path: "user",
-        select: "_id fullName email phone role",
-      },
-    });
+    const carePlan =
+      await CarePlan.findById(
+        req.params.id
+      );
 
     if (!carePlan) {
       return res.status(404).json({
         success: false,
-        message: "Care plan not found",
+        message:
+          "Care plan not found",
       });
     }
 
-    const currentUserId = req.user.id.toString();
+    const currentUserId =
+      req.user.id.toString();
 
-    const createdById =
-      carePlan.createdBy?.toString();
+    const creatorId =
+      normalizeId(
+        carePlan.createdBy
+      );
 
-    const childId =
-      carePlan.child?._id
-        ? carePlan.child._id.toString()
-        : carePlan.child?.toString();
+    const recipientId =
+      normalizeId(
+        carePlan.recipient
+      );
 
-    const parentUserId =
-      carePlan.parent?.user?._id
-        ? carePlan.parent.user._id.toString()
-        : carePlan.parent?.user?.toString();
+    /*
+     * Legacy records may not have recipient.
+     *
+     * Fall back to child / parent.
+     */
+    let legacyRecipientId =
+      recipientId;
 
-    const isCreator =
-      createdById === currentUserId;
-
-    const isChildRecipient =
-      childId === currentUserId;
-
-    const isParentRecipient =
-      parentUserId === currentUserId;
+    if (!legacyRecipientId) {
+      legacyRecipientId =
+        normalizeId(
+          carePlan.child
+        );
+    }
 
     if (
-      !isCreator &&
-      !isChildRecipient &&
-      !isParentRecipient
+      !legacyRecipientId &&
+      carePlan.parent
     ) {
+      const parent =
+        await Parent.findById(
+          carePlan.parent
+        ).select("user");
+
+      legacyRecipientId =
+        normalizeId(
+          parent?.user
+        );
+    }
+
+    const canUpdate =
+      creatorId ===
+        currentUserId ||
+      legacyRecipientId ===
+        currentUserId;
+
+    if (!canUpdate) {
       return res.status(403).json({
         success: false,
-        message: "You cannot update this care plan",
+        message:
+          "You cannot update this care plan",
       });
     }
 
-    const allowedUpdates = {};
+    const allowedUpdates =
+      {};
 
-    if (req.body.title !== undefined) {
-      const title = String(req.body.title).trim();
+    if (
+      req.body.title !==
+      undefined
+    ) {
+      const title =
+        String(
+          req.body.title
+        ).trim();
 
       if (!title) {
         return res.status(400).json({
           success: false,
-          message: "Title cannot be empty",
+          message:
+            "Title cannot be empty",
         });
       }
 
-      allowedUpdates.title = title;
+      allowedUpdates.title =
+        title;
     }
 
-    if (req.body.description !== undefined) {
+    if (
+      req.body.description !==
+      undefined
+    ) {
       allowedUpdates.description =
-        req.body.description?.trim() || "";
+        String(
+          req.body.description ||
+            ""
+        ).trim();
     }
 
-    if (req.body.dueDate !== undefined) {
-      allowedUpdates.dueDate = req.body.dueDate;
+    if (
+      req.body.dueDate !==
+      undefined
+    ) {
+      if (
+        req.body.dueDate ===
+          null ||
+        req.body.dueDate ===
+          ""
+      ) {
+        allowedUpdates.dueDate =
+          null;
+      } else {
+        const parsed =
+          new Date(
+            req.body.dueDate
+          );
+
+        if (
+          Number.isNaN(
+            parsed.getTime()
+          )
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Invalid due date",
+          });
+        }
+
+        allowedUpdates.dueDate =
+          parsed;
+      }
     }
 
-    if (req.body.status !== undefined) {
-      allowedUpdates.status = req.body.status;
+    if (
+      req.body.status !==
+      undefined
+    ) {
+      if (
+        ![
+          "pending",
+          "completed",
+        ].includes(
+          req.body.status
+        )
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid status",
+        });
+      }
+
+      allowedUpdates.status =
+        req.body.status;
     }
 
     const updatedCarePlan =
@@ -409,6 +708,10 @@ const updateCarePlan = async (req, res) => {
           "fullName email phone role"
         )
         .populate(
+          "recipient",
+          "fullName email phone role"
+        )
+        .populate(
           "child",
           "fullName email phone role"
         )
@@ -416,71 +719,99 @@ const updateCarePlan = async (req, res) => {
           path: "parent",
           populate: {
             path: "user",
-            select: "fullName email phone role",
+            select:
+              "fullName email phone role",
           },
         })
-        .populate("parentChild");
+        .populate(
+          "parentChild"
+        )
+        .populate(
+          "family"
+        );
 
     return res.status(200).json({
       success: true,
-      message: "Care plan updated successfully",
-      data: updatedCarePlan,
+      message:
+        "Care plan updated successfully",
+      data:
+        updatedCarePlan,
     });
   } catch (error) {
-    console.error("Update care plan error:", error);
+    console.error(
+      "Update care plan error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Server Error",
+      message:
+        "Server Error",
     });
   }
 };
 
-// ============================================================
-// DELETE CARE PLAN
-//
-// Keep existing behavior: only the creator can delete their
-// care plan.
-// ============================================================
-const deleteCarePlan = async (req, res) => {
+/*
+ * ------------------------------------------------------------
+ * DELETE CARE PLAN
+ * ------------------------------------------------------------
+ *
+ * Creator can delete anytime.
+ *
+ * Recipient can delete once completed.
+ */
+const deleteCarePlan = async (
+  req,
+  res
+) => {
   try {
-    const carePlan = await CarePlan.findById(req.params.id).populate({
-      path: "parent",
-      populate: {
-        path: "user",
-        select: "_id fullName email phone role",
-      },
-    });
+    const carePlan =
+      await CarePlan.findById(
+        req.params.id
+      );
 
     if (!carePlan) {
       return res.status(404).json({
         success: false,
-        message: "Care plan not found",
+        message:
+          "Care plan not found",
       });
     }
 
-    const currentUserId = req.user.id.toString();
-    const createdById = carePlan.createdBy?.toString();
-    const childId = carePlan.child?._id
-      ? carePlan.child._id.toString()
-      : carePlan.child?.toString();
-    const parentUserId = carePlan.parent?.user?._id
-      ? carePlan.parent.user._id.toString()
-      : carePlan.parent?.user?.toString();
+    const currentUserId =
+      req.user.id.toString();
 
-    const isCreator = createdById === currentUserId;
-    const isChildRecipient = childId === currentUserId;
-    const isParentRecipient = parentUserId === currentUserId;
-    const isCompletedTask = carePlan.status === "completed";
+    const creatorId =
+      normalizeId(
+        carePlan.createdBy
+      );
+
+    const recipientId =
+      normalizeId(
+        carePlan.recipient
+      );
+
+    const isCreator =
+      creatorId ===
+      currentUserId;
+
+    const isRecipient =
+      recipientId ===
+      currentUserId;
 
     const canDelete =
       isCreator ||
-      (isCompletedTask && (isChildRecipient || isParentRecipient));
+      (
+        carePlan.status ===
+          "completed" &&
+        isRecipient
+      );
 
     if (!canDelete) {
       return res.status(403).json({
         success: false,
-        message: "You cannot delete this care plan",
+        message:
+          "You cannot delete this care plan",
       });
     }
 
@@ -488,14 +819,19 @@ const deleteCarePlan = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Care plan deleted successfully",
+      message:
+        "Care plan deleted successfully",
     });
   } catch (error) {
-    console.error("Delete care plan error:", error);
+    console.error(
+      "Delete care plan error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Server Error",
+      message:
+        "Server Error",
     });
   }
 };

@@ -31,3 +31,26 @@ export const switchActiveParent =
 
     return response.data;
   };
+
+/*
+ * Get every member of the current user's family.
+ *
+ * Unlike getParentChildRelationships(), this endpoint is
+ * intentionally universal and returns:
+ *
+ *   Parent
+ *   Parent
+ *   Child
+ *   Child
+ *
+ * depending on who exists in the family.
+ */
+export const getFamilyMembers =
+  async () => {
+    const response =
+      await api.get(
+        "/parent-child/family-members"
+      );
+
+    return response.data;
+  };

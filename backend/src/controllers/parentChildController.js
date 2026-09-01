@@ -228,8 +228,127 @@ const switchActiveParent = async (req, res) => {
   }
 };
 
+
+/*
+ * ============================================================
+ * GET ALL FAMILY MEMBERS
+ * ============================================================
+ *
+ * Universal Care recipient source.
+ *
+ * Returns every User in the logged-in user's Family:
+ *
+ *   Parent
+ *   Parent
+ *   Child
+ *   Child
+ *
+ * This is intentionally separate from /parent-child because
+ * /parent-child represents relationship records, while Care
+ * needs actual family members.
+ */
+const getFamilyMembers = async (req, res) => {
+  try {
+    const family = await Family.findOne({
+      $or: [
+        { father: req.user.id },
+        { mother: req.user.id },
+        { children: req.user.id },
+      ],
+    }).select(
+      "_id familyCode father mother children"
+    );
+
+    if (!family) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+      });
+    }
+
+    const memberIds = [];
+
+    if (family.father) {
+      memberIds.push(
+        family.father
+      );
+    }
+
+    if (family.mother) {
+      memberIds.push(
+        family.mother
+      );
+    }
+
+    for (const child of family.children || []) {
+      memberIds.push(child);
+    }
+
+    const uniqueIds = [
+      ...new Set(
+        memberIds.map(
+          (id) => id.toString()
+        )
+      ),
+    ];
+
+    /*
+     * Do not show the current user as a recipient.
+     */
+    const recipientIds =
+      uniqueIds.filter(
+        (id) =>
+          id !==
+          req.user.id.toString()
+      );
+
+    const users =
+      await User.find({
+        _id: {
+          $in: recipientIds,
+        },
+        role: {
+          $in: [
+            "parent",
+            "child",
+          ],
+        },
+      }).select(
+        "_id fullName email phone role"
+      );
+
+    const order = {
+      parent: 0,
+      child: 1,
+    };
+
+    users.sort(
+      (a, b) =>
+        (order[a.role] ?? 99) -
+        (order[b.role] ?? 99)
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: users,
+    });
+  } catch (error) {
+    console.error(
+      "Get family members error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "Server Error",
+    });
+  }
+};
+
 module.exports = {
   getParents,
+  getFamilyMembers,
   removeParent,
   switchActiveParent,
 };

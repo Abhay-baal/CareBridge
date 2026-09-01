@@ -9,6 +9,7 @@ const {
 
 const {
   getParents,
+  getFamilyMembers,
   removeParent,
   switchActiveParent,
 } = require("../controllers/parentChildController");
@@ -21,6 +22,12 @@ router.get(
   "/",
   authorize("parent", "child"),
   getParents
+);
+
+router.get(
+  "/family-members",
+  authorize("parent", "child"),
+  getFamilyMembers
 );
 
 // Child-only relationship management

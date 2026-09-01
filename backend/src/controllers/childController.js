@@ -49,10 +49,33 @@ const getChildDashboard = async (req, res) => {
     }
 
     const [carePlans, appointments] = await Promise.all([
+      /*
+       * Universal Care:
+       *
+       * Show every CarePlan assigned TO this child,
+       * regardless of who created it.
+       *
+       * This allows:
+       *   Parent -> Child
+       *   Child  -> Child
+       *   Child  -> Child from another family member
+       *
+       * Legacy Parent -> Child records are also supported.
+       */
       CarePlan.find({
-        child: req.user.id,
-        parent: parent._id,
-      }).sort({ dueDate: 1 }),
+        $or: [
+          {
+            recipient: req.user.id,
+          },
+          {
+            child: req.user.id,
+            parent: parent._id,
+          },
+        ],
+      }).sort({
+        dueDate: 1,
+        createdAt: -1,
+      }),
 
       Appointment.find({
         parent: parent._id,

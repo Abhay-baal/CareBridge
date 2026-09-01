@@ -14,11 +14,8 @@ import {
 
 import {
   getParentChildRelationships,
+  getFamilyMembers,
 } from "@/services/parentChildService";
-
-import {
-  createChildCarePlan,
-} from "@/services/childService";
 
 const WALK_LEVELS = [
   {
@@ -59,16 +56,44 @@ const WALK_LEVELS = [
 ];
 
 function getDueDate(value) {
+  /*
+   * No specific time.
+   */
+  if (
+    !value ||
+    value === "none" ||
+    value === "no-time"
+  ) {
+    return null;
+  }
+
   const now = new Date();
 
-  const [day, time] = value.split("|");
-  const [hours, minutes] = time
-    .split(":")
-    .map(Number);
+  const [day, time] =
+    value.split("|");
 
-  const dueDate = new Date(now);
+  if (!day || !time) {
+    return null;
+  }
 
-  if (day === "tomorrow") {
+  const [hours, minutes] =
+    time
+      .split(":")
+      .map(Number);
+
+  if (
+    Number.isNaN(hours) ||
+    Number.isNaN(minutes)
+  ) {
+    return null;
+  }
+
+  const dueDate =
+    new Date(now);
+
+  if (
+    day === "tomorrow"
+  ) {
     dueDate.setDate(
       dueDate.getDate() + 1
     );
@@ -83,6 +108,7 @@ function getDueDate(value) {
 
   return dueDate.toISOString();
 }
+
 
 function getUserId(value) {
   if (!value) return null;
@@ -122,56 +148,229 @@ function normalizeCarePlan(
       "Care activity:"
     );
 
+  /*
+   * ----------------------------------------------------------
+   * UNIVERSAL CARE IDENTITIES
+   * ----------------------------------------------------------
+   *
+   * New CarePlan records contain:
+   *
+   *   createdBy      = actual sender
+   *   recipient      = actual recipient
+   *   recipientRole  = recipient role
+   *
+   * This supports:
+   *
+   *   Parent -> Parent
+   *   Parent -> Child
+   *   Child  -> Parent
+   *   Child  -> Child
+   *
+   * Use these fields FIRST.
+   */
+
+  const senderUser =
+    plan.createdBy || null;
+
+  const recipientUser =
+    plan.recipient || null;
+
   const senderId =
-    getUserId(plan.createdBy);
+    getUserId(senderUser);
 
-  const childId =
-    getUserId(plan.child);
+  const recipientId =
+    getUserId(recipientUser);
 
-  const parentUserId =
-    getUserId(plan.parent?.user);
+  const senderRole =
+    senderUser?.role ||
+    (
+      senderId ===
+      getUserId(plan.child)
+        ? "child"
+        : "parent"
+    );
 
-  const isGivenByMe =
-    senderId === currentUserId;
+  const recipientRole =
+    plan.recipientRole ||
+    recipientUser?.role ||
+    (
+      recipientId ===
+      getUserId(plan.child)
+        ? "child"
+        : "parent"
+    );
 
-  let recipient;
+  const getRoleLabel = (role) =>
+    role === "child"
+      ? "Child"
+      : "Parent";
 
-  if (senderId === childId) {
-    recipient = {
-      id: parentUserId,
-      name: getUserName(
-        plan.parent?.user
+  const getRoleEmoji = (role) =>
+    role === "child"
+      ? "👦"
+      : "👨";
+
+  /*
+   * New universal sender.
+   *
+   * If populated, use the actual User.
+   */
+  const sender = {
+    id:
+      senderId ||
+      null,
+
+    name:
+      getUserName(
+        senderUser
       ),
-      role: "Parent",
-      emoji: "👨‍👩‍👧",
-    };
-  } else {
-    recipient = {
-      id: childId,
-      name: getUserName(plan.child),
-      role: "Child",
-      emoji: "👦",
-    };
+
+    role:
+      getRoleLabel(
+        senderRole
+      ),
+
+    emoji:
+      getRoleEmoji(
+        senderRole
+      ),
+  };
+
+  /*
+   * New universal recipient.
+   */
+  const recipient = {
+    id:
+      recipientId ||
+      null,
+
+    name:
+      getUserName(
+        recipientUser
+      ),
+
+    role:
+      getRoleLabel(
+        recipientRole
+      ),
+
+    emoji:
+      getRoleEmoji(
+        recipientRole
+      ),
+  };
+
+  /*
+   * ----------------------------------------------------------
+   * LEGACY FALLBACK
+   * ----------------------------------------------------------
+   *
+   * Existing CarePlans may not have createdBy/recipient
+   * populated in the new format.
+   *
+   * Preserve support for those records.
+   */
+  const hasUniversalIdentity =
+    Boolean(
+      senderId &&
+      recipientId
+    );
+
+  let finalSender =
+    sender;
+
+  let finalRecipient =
+    recipient;
+
+  if (
+    !hasUniversalIdentity
+  ) {
+    const childId =
+      getUserId(plan.child);
+
+    const parentUserId =
+      getUserId(
+        plan.parent?.user
+      );
+
+    if (
+      childId ||
+      parentUserId
+    ) {
+      if (
+        senderId ===
+        childId
+      ) {
+        finalSender = {
+          id:
+            childId,
+
+          name:
+            getUserName(
+              plan.child
+            ),
+
+          role:
+            "Child",
+
+          emoji:
+            "👦",
+        };
+
+        finalRecipient = {
+          id:
+            parentUserId,
+
+          name:
+            getUserName(
+              plan.parent?.user
+            ),
+
+          role:
+            "Parent",
+
+          emoji:
+            "👨",
+        };
+      } else {
+        finalSender = {
+          id:
+            parentUserId,
+
+          name:
+            getUserName(
+              plan.parent?.user
+            ),
+
+          role:
+            "Parent",
+
+          emoji:
+            "👨",
+        };
+
+        finalRecipient = {
+          id:
+            childId,
+
+          name:
+            getUserName(
+              plan.child
+            ),
+
+          role:
+            "Child",
+
+          emoji:
+            "👦",
+        };
+      }
+    }
   }
 
-  const sender =
-    senderId === childId
-      ? {
-          id: childId,
-          name: getUserName(
-            plan.child
-          ),
-          role: "Child",
-          emoji: "👦",
-        }
-      : {
-          id: parentUserId,
-          name: getUserName(
-            plan.parent?.user
-          ),
-          role: "Parent",
-          emoji: "👨",
-        };
+  const isGivenByMe =
+    senderId ===
+    currentUserId;
 
   return {
     ...plan,
@@ -180,9 +379,10 @@ function normalizeCarePlan(
       plan._id ||
       plan.id,
 
-    type: isWalk
-      ? "walk"
-      : "task",
+    type:
+      isWalk
+        ? "walk"
+        : "task",
 
     duration:
       plan.walkDuration,
@@ -190,35 +390,47 @@ function normalizeCarePlan(
     level:
       WALK_LEVELS.find(
         (level) =>
-          level.id === plan.walkLevel
+          level.id ===
+          plan.walkLevel
       )?.label ||
       plan.walkLevel,
 
     levelEmoji:
       WALK_LEVELS.find(
         (level) =>
-          level.id === plan.walkLevel
+          level.id ===
+          plan.walkLevel
       )?.emoji,
 
     senderId,
 
-    sender,
+    sender:
+      finalSender,
 
-    recipient,
+    recipient:
+      finalRecipient,
 
     isGivenByMe,
 
     isGivenToMe:
-      recipient.id === currentUserId,
+      finalRecipient.id ===
+      currentUserId,
 
-    time: plan.dueDate
-      ? new Date(
-          plan.dueDate
-        ).toLocaleString([], {
-          dateStyle: "medium",
-          timeStyle: "short",
-        })
-      : "No due date",
+    time:
+      plan.dueDate
+        ? new Date(
+            plan.dueDate
+          ).toLocaleString(
+            [],
+            {
+              dateStyle:
+                "medium",
+
+              timeStyle:
+                "short",
+            }
+          )
+        : "No due date",
   };
 }
 
@@ -342,7 +554,7 @@ export default function CarePlanPage() {
   ] = useState([]);
 
   const [taskTime, setTaskTime] =
-    useState("today|19:00");
+    useState("none");
 
   const [
     selectedWalkLevel,
@@ -382,18 +594,26 @@ export default function CarePlanPage() {
         );
 
         const [
-          relationshipResponse,
+          familyMembersResponse,
           carePlanResponse,
         ] = await Promise.all([
-          getParentChildRelationships(),
+          getFamilyMembers(),
           getCarePlans(),
         ]);
 
         if (cancelled) return;
 
+        const familyMembers =
+          familyMembersResponse?.data ||
+          [];
+
+        /*
+         * Keep the existing relationships state available for
+         * legacy UI, but use the universal family member list
+         * for Care assignment.
+         */
         setRelationships(
-          relationshipResponse?.data ||
-            []
+          familyMembers
         );
 
         const rawPlans =
@@ -448,46 +668,54 @@ export default function CarePlanPage() {
     isChild,
   ]);
 
+  /*
+   * UNIVERSAL CARE RECIPIENTS
+   *
+   * Every member of the current family can receive Care.
+   *
+   * Parent -> Parent
+   * Parent -> Child
+   * Child  -> Parent
+   * Child  -> Child
+   *
+   * The current user is excluded by the backend.
+   */
   const recipients = useMemo(() => {
     return relationships
       .filter(
-        (relationship) =>
-          relationship?.parent &&
-          relationship?.child
+        (person) =>
+          person?._id &&
+          person?._id !== currentUserId
       )
       .map(
-        (relationship) => ({
-          id: isChild
-            ? relationship.parent._id
-            : relationship.child._id,
+        (person) => ({
+          id: person._id.toString(),
 
-          relationshipId:
-            relationship._id,
+          name:
+            person.fullName ||
+            person.name ||
+            "Family",
 
-          name: isChild
-            ? relationship.parent
-                .fullName
-            : relationship.child
-                .fullName,
+          email:
+            person.email ||
+            "",
 
-          email: isChild
-            ? relationship.parent
-                .email
-            : relationship.child
-                .email,
+          emoji:
+            person.role ===
+            "parent"
+              ? "👨"
+              : "👦",
 
-          emoji: isChild
-            ? "👨"
-            : "👦",
-
-          role: isChild
-            ? "Parent"
-            : "Child",
+          role:
+            person.role ===
+            "parent"
+              ? "Parent"
+              : "Child",
         })
       );
   }, [
     relationships,
-    isChild,
+    currentUserId,
   ]);
 
   const freshTasks = useMemo(() => {
@@ -679,7 +907,7 @@ export default function CarePlanPage() {
       []
     );
     setTaskTime(
-      "today|19:00"
+      "none"
     );
     setSelectedWalkLevel(
       "medium"
@@ -714,8 +942,7 @@ export default function CarePlanPage() {
   const assignTask = async () => {
     if (
       !taskTitle.trim() ||
-      selectedRecipients.length ===
-        0
+      selectedRecipients.length === 0
     ) {
       return;
     }
@@ -724,32 +951,30 @@ export default function CarePlanPage() {
       await Promise.all(
         selectedRecipients.map(
           (recipientId) =>
-            (
-              isChild
-                ? createChildCarePlan
-                : createCarePlan
-            )({
+            createCarePlan({
               title:
                 taskTitle.trim(),
 
               description: "",
+
+              /*
+               * Universal recipient.
+               *
+               * Works for:
+               * Parent -> Parent
+               * Parent -> Child
+               * Child  -> Parent
+               * Child  -> Child
+               */
+              recipientId,
 
               dueDate:
                 getDueDate(
                   taskTime
                 ),
 
-              ...(isChild
-                ? {
-                    parentId:
-                      recipientId,
-                  }
-                : {
-                    childId:
-                      recipientId,
-                  }),
-
-              careType: "task",
+              careType:
+                "task",
             })
         )
       );
@@ -781,8 +1006,7 @@ export default function CarePlanPage() {
 
   const assignWalk = async () => {
     if (
-      selectedRecipients.length ===
-      0
+      selectedRecipients.length === 0
     ) {
       return;
     }
@@ -791,31 +1015,25 @@ export default function CarePlanPage() {
       await Promise.all(
         selectedRecipients.map(
           (recipientId) =>
-            (
-              isChild
-                ? createChildCarePlan
-                : createCarePlan
-            )({
-              title: `Walk for ${currentWalkLevel.display}`,
+            createCarePlan({
+              title:
+                `Walk for ${currentWalkLevel.display}`,
 
-              description: `Care activity: ${currentWalkLevel.label} walk`,
+              description:
+                `Care activity: ${currentWalkLevel.label} walk`,
+
+              /*
+               * Universal recipient.
+               */
+              recipientId,
 
               dueDate:
                 getDueDate(
                   taskTime
                 ),
 
-              ...(isChild
-                ? {
-                    parentId:
-                      recipientId,
-                  }
-                : {
-                    childId:
-                      recipientId,
-                  }),
-
-              careType: "walk",
+              careType:
+                "walk",
 
               walkLevel:
                 currentWalkLevel.id,
@@ -1142,34 +1360,159 @@ export default function CarePlanPage() {
 
             <select
               value={
-                taskTime
+                taskTime === "none"
+                  ? "none"
+                  : "specific"
               }
-              onChange={(
-                event
-              ) =>
+              onChange={(event) => {
+                if (
+                  event.target.value ===
+                  "none"
+                ) {
+                  setTaskTime("none");
+                  return;
+                }
+
                 setTaskTime(
-                  event.target
-                    .value
-                )
-              }
+                  "today|19:00"
+                );
+              }}
               className="mt-2 w-full rounded-2xl border border-rose-100 bg-rose-50/60 px-4 py-3.5 text-sm text-slate-900 outline-none focus:border-rose-200"
             >
-              <option value="today|17:00">
-                Today · 5:00 PM
+              <option value="none">
+                No specific time
               </option>
 
-              <option value="today|19:00">
-                Today · 7:00 PM
-              </option>
-
-              <option value="tomorrow|09:00">
-                Tomorrow · 9:00 AM
-              </option>
-
-              <option value="tomorrow|18:00">
-                Tomorrow · 6:00 PM
+              <option value="specific">
+                Specific time
               </option>
             </select>
+
+            {taskTime !== "none" && (
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500">
+                    Hour
+                  </label>
+
+                  <select
+                    value={
+                      taskTime.split("|")[1]?.split(":")[0] ||
+                      "19"
+                    }
+                    onChange={(event) => {
+                      const parts =
+                        taskTime.split("|");
+
+                      const day =
+                        parts[0] ||
+                        "today";
+
+                      const currentTime =
+                        parts[1] ||
+                        "19:00";
+
+                      const minutes =
+                        currentTime.split(":")[1] ||
+                        "00";
+
+                      setTaskTime(
+                        `${day}|${event.target.value}:${minutes}`
+                      );
+                    }}
+                    className="mt-1 w-full rounded-2xl border border-rose-100 bg-rose-50/60 px-4 py-3.5 text-sm text-slate-900 outline-none focus:border-rose-200"
+                  >
+                    {Array.from(
+                      { length: 24 },
+                      (_, hour) => (
+                        <option
+                          key={hour}
+                          value={String(hour).padStart(2, "0")}
+                        >
+                          {String(hour).padStart(2, "0")}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500">
+                    Minute
+                  </label>
+
+                  <select
+                    value={
+                      taskTime.split("|")[1]?.split(":")[1] ||
+                      "00"
+                    }
+                    onChange={(event) => {
+                      const parts =
+                        taskTime.split("|");
+
+                      const day =
+                        parts[0] ||
+                        "today";
+
+                      const currentTime =
+                        parts[1] ||
+                        "19:00";
+
+                      const hour =
+                        currentTime.split(":")[0] ||
+                        "19";
+
+                      setTaskTime(
+                        `${day}|${hour}:${event.target.value}`
+                      );
+                    }}
+                    className="mt-1 w-full rounded-2xl border border-rose-100 bg-rose-50/60 px-4 py-3.5 text-sm text-slate-900 outline-none focus:border-rose-200"
+                  >
+                    {Array.from(
+                      { length: 60 },
+                      (_, minute) => (
+                        <option
+                          key={minute}
+                          value={String(minute).padStart(2, "0")}
+                        >
+                          {String(minute).padStart(2, "0")}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {taskTime !== "none" && (
+              <select
+                value={
+                  taskTime.split("|")[0] ||
+                  "today"
+                }
+                onChange={(event) => {
+                  const parts =
+                    taskTime.split("|");
+
+                  const time =
+                    parts[1] ||
+                    "19:00";
+
+                  setTaskTime(
+                    `${event.target.value}|${time}`
+                  );
+                }}
+                className="mt-3 w-full rounded-2xl border border-rose-100 bg-rose-50/60 px-4 py-3.5 text-sm text-slate-900 outline-none focus:border-rose-200"
+              >
+                <option value="today">
+                  Today
+                </option>
+
+                <option value="tomorrow">
+                  Tomorrow
+                </option>
+              </select>
+            )}
           </div>
 
           <button
@@ -1255,6 +1598,157 @@ export default function CarePlanPage() {
                 )
               )}
             </div>
+
+            <label className="mt-6 block text-sm font-semibold text-slate-700">
+              When?
+            </label>
+
+            <select
+              value={
+                taskTime === "none"
+                  ? "none"
+                  : "specific"
+              }
+              onChange={(event) => {
+                if (
+                  event.target.value ===
+                  "none"
+                ) {
+                  setTaskTime("none");
+                  return;
+                }
+
+                setTaskTime(
+                  "today|19:00"
+                );
+              }}
+              className="mt-2 w-full rounded-2xl border border-rose-100 bg-rose-50/60 px-4 py-3.5 text-sm text-slate-900 outline-none focus:border-rose-200"
+            >
+              <option value="none">
+                No specific time
+              </option>
+
+              <option value="specific">
+                Specific time
+              </option>
+            </select>
+
+            {taskTime !== "none" && (
+              <>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500">
+                      Hour
+                    </label>
+
+                    <select
+                      value={
+                        taskTime.split("|")[1]?.split(":")[0] ||
+                        "19"
+                      }
+                      onChange={(event) => {
+                        const day =
+                          taskTime.split("|")[0] ||
+                          "today";
+
+                        const current =
+                          taskTime.split("|")[1] ||
+                          "19:00";
+
+                        const minute =
+                          current.split(":")[1] ||
+                          "00";
+
+                        setTaskTime(
+                          `${day}|${event.target.value}:${minute}`
+                        );
+                      }}
+                      className="mt-1 w-full rounded-2xl border border-rose-100 bg-rose-50/60 px-4 py-3.5 text-sm text-slate-900 outline-none"
+                    >
+                      {Array.from(
+                        { length: 24 },
+                        (_, hour) => (
+                          <option
+                            key={hour}
+                            value={String(hour).padStart(2, "0")}
+                          >
+                            {String(hour).padStart(2, "0")}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500">
+                      Minute
+                    </label>
+
+                    <select
+                      value={
+                        taskTime.split("|")[1]?.split(":")[1] ||
+                        "00"
+                      }
+                      onChange={(event) => {
+                        const day =
+                          taskTime.split("|")[0] ||
+                          "today";
+
+                        const current =
+                          taskTime.split("|")[1] ||
+                          "19:00";
+
+                        const hour =
+                          current.split(":")[0] ||
+                          "19";
+
+                        setTaskTime(
+                          `${day}|${hour}:${event.target.value}`
+                        );
+                      }}
+                      className="mt-1 w-full rounded-2xl border border-rose-100 bg-rose-50/60 px-4 py-3.5 text-sm text-slate-900 outline-none"
+                    >
+                      {Array.from(
+                        { length: 60 },
+                        (_, minute) => (
+                          <option
+                            key={minute}
+                            value={String(minute).padStart(2, "0")}
+                          >
+                            {String(minute).padStart(2, "0")}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+                </div>
+
+                <select
+                  value={
+                    taskTime.split("|")[0] ||
+                    "today"
+                  }
+                  onChange={(event) => {
+                    const time =
+                      taskTime.split("|")[1] ||
+                      "19:00";
+
+                    setTaskTime(
+                      `${event.target.value}|${time}`
+                    );
+                  }}
+                  className="mt-3 w-full rounded-2xl border border-rose-100 bg-rose-50/60 px-4 py-3.5 text-sm text-slate-900 outline-none"
+                >
+                  <option value="today">
+                    Today
+                  </option>
+
+                  <option value="tomorrow">
+                    Tomorrow
+                  </option>
+                </select>
+              </>
+            )}
 
             <label className="mt-6 block text-sm font-semibold text-slate-700">
               Choose walk level

@@ -2,6 +2,13 @@ const mongoose = require("mongoose");
 
 const carePlanSchema = new mongoose.Schema(
   {
+    /*
+     * The user who created/gave the care item.
+     *
+     * Can be:
+     *   parent
+     *   child
+     */
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -9,24 +16,63 @@ const carePlanSchema = new mongoose.Schema(
       index: true,
     },
 
-    parent: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Parent",
-      required: true,
-      index: true,
-    },
-
-    child: {
+    /*
+     * Universal recipient.
+     *
+     * This is the important change.
+     *
+     * A CarePlan can now be:
+     *
+     * Parent  -> Parent
+     * Parent  -> Child
+     * Child   -> Parent
+     * Child   -> Child
+     */
+    recipient: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
       index: true,
     },
 
+    recipientRole: {
+      type: String,
+      enum: ["parent", "child"],
+      required: true,
+      index: true,
+    },
+
+    /*
+     * Family containing creator + recipient.
+     */
+    family: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Family",
+      required: true,
+      index: true,
+    },
+
+    /*
+     * Legacy relationship fields.
+     *
+     * These remain optional so existing Parent -> Child
+     * CarePlans continue to work.
+     */
+    parent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Parent",
+      index: true,
+    },
+
+    child: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      index: true,
+    },
+
     parentChild: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "ParentChild",
-      required: true,
       index: true,
     },
 
@@ -52,7 +98,13 @@ const carePlanSchema = new mongoose.Schema(
 
     walkLevel: {
       type: String,
-      enum: ["light", "easy", "medium", "hard", "extreme"],
+      enum: [
+        "light",
+        "easy",
+        "medium",
+        "hard",
+        "extreme",
+      ],
     },
 
     walkDuration: {
@@ -68,9 +120,15 @@ const carePlanSchema = new mongoose.Schema(
       index: true,
     },
 
+    /*
+     * Optional now.
+     *
+     * null = no specific time
+     * Date   = specific date/time
+     */
     dueDate: {
       type: Date,
-      required: true,
+      default: null,
       index: true,
     },
   },
@@ -79,16 +137,36 @@ const carePlanSchema = new mongoose.Schema(
   }
 );
 
+/*
+ * Universal family feed.
+ */
+carePlanSchema.index({
+  family: 1,
+  dueDate: 1,
+  createdAt: -1,
+});
+
+carePlanSchema.index({
+  recipient: 1,
+  status: 1,
+  dueDate: 1,
+});
+
+carePlanSchema.index({
+  createdBy: 1,
+  createdAt: -1,
+});
+
+/*
+ * Legacy query support.
+ */
 carePlanSchema.index({
   parent: 1,
   child: 1,
   dueDate: 1,
 });
 
-carePlanSchema.index({
-  child: 1,
-  status: 1,
-  dueDate: 1,
-});
-
-module.exports = mongoose.model("CarePlan", carePlanSchema);
+module.exports = mongoose.model(
+  "CarePlan",
+  carePlanSchema
+);
