@@ -13,11 +13,9 @@ import {
   Languages,
   LockKeyhole,
   LogOut,
-  Moon,
   ShieldCheck,
   Venus,
   Mars,
-  Sun,
   UserRound,
   X,
 } from "lucide-react";
@@ -30,7 +28,6 @@ import {
   changePassword,
   getSettings,
   updateAccount,
-  updateAppearance,
   updateLanguage,
   updateNotifications,
   updatePrivacy,
@@ -206,16 +203,6 @@ export default function SettingsPage() {
   });
 
   const [notifications, setNotifications] = useState({});
-  const [appearance, setAppearance] = useState(() => {
-    if (typeof window === "undefined") {
-      return "light";
-    }
-
-    return localStorage.getItem("carebridge_appearance") ===
-      "dark"
-      ? "dark"
-      : "light";
-  });
   const [language, setLanguage] = useState("English");
   const [privacy, setPrivacy] = useState({
     analytics: true,
@@ -256,10 +243,6 @@ export default function SettingsPage() {
 
         setNotifications(
           data.settings?.notifications || {}
-        );
-
-        setAppearance(
-          data.settings?.appearance || "light"
         );
 
         setLanguage(
@@ -315,13 +298,6 @@ export default function SettingsPage() {
 
     loadSettings();
   }, []);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle(
-      "dark",
-      appearance === "dark"
-    );
-  }, [appearance]);
 
   const saveProfile = async (event) => {
     event.preventDefault();
@@ -463,23 +439,6 @@ export default function SettingsPage() {
       );
     } finally {
       setPushLoading(false);
-    }
-  };
-
-  const selectAppearance = async (value) => {
-    const previous = appearance;
-    setAppearance(value);
-
-    try {
-      await updateAppearance(value);
-      localStorage.setItem(
-        "carebridge_appearance",
-        value
-      );
-      toast.success("Appearance saved");
-    } catch (error) {
-      setAppearance(previous);
-      toast.error(error.message);
     }
   };
 
@@ -1004,62 +963,6 @@ export default function SettingsPage() {
                 />
               </div>
             ))}
-          </div>
-        </Modal>
-      )}
-
-      {/* Appearance */}
-      {modal === "appearance" && (
-        <Modal
-          title="Appearance"
-          onClose={() => setModal(null)}
-        >
-          <div className="space-y-3">
-            {[
-              {
-                value: "light",
-                label: "Light",
-                icon: Sun,
-              },
-              {
-                value: "dark",
-                label: "Dark",
-                icon: Moon,
-              },
-            ].map((item) => {
-              const Icon = item.icon;
-              const selected =
-                appearance === item.value;
-
-              return (
-                <button
-                  key={item.value}
-                  type="button"
-                  onClick={() =>
-                    selectAppearance(
-                      item.value
-                    )
-                  }
-                  className={`flex w-full items-center gap-3 rounded-2xl border p-4 text-left ${
-                    selected
-                      ? "border-purple-200 bg-purple-50"
-                      : "border-gray-100 bg-white"
-                  }`}
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f8f1ff] text-[#9b72c5]">
-                    <Icon className="h-5 w-5" />
-                  </div>
-
-                  <span className="flex-1 text-sm font-semibold text-gray-900">
-                    {item.label}
-                  </span>
-
-                  {selected && (
-                    <Check className="h-5 w-5 text-[#9b72c5]" />
-                  )}
-                </button>
-              );
-            })}
           </div>
         </Modal>
       )}
