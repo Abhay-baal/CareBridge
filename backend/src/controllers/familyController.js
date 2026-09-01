@@ -305,12 +305,17 @@ const joinFamily = async (req, res) => {
       );
 
       if (!alreadyChild) {
-        family.children.push(userId);
+        await Family.updateOne(
+          { _id: family._id },
+          { $addToSet: { children: userId } }
+        );
       }
 
-      await family.save();
+      const updatedFamily = await Family.findById(family._id);
 
-      await syncFamilyRelationships(family);
+      if (updatedFamily) {
+        await syncFamilyRelationships(updatedFamily);
+      }
 
       return res.status(200).json({
         success: true,
@@ -351,11 +356,16 @@ const joinFamily = async (req, res) => {
         });
       }
 
-      family[position] = userId;
+      await Family.updateOne(
+        { _id: family._id },
+        { $set: { [position]: userId } }
+      );
 
-      await family.save();
+      const updatedFamily = await Family.findById(family._id);
 
-      await syncFamilyRelationships(family);
+      if (updatedFamily) {
+        await syncFamilyRelationships(updatedFamily);
+      }
 
       return res.status(200).json({
         success: true,
@@ -429,28 +439,60 @@ const leaveFamily = async (req, res) => {
       });
     }
 
+    const update = {};
+
     if (family.father?.toString() === userString) {
-      family.father = null;
+      update.$set = {
+        ...(update.$set || {}),
+        father: null,
+      };
     }
 
     if (family.mother?.toString() === userString) {
-      family.mother = null;
+      update.$set = {
+        ...(update.$set || {}),
+        mother: null,
+      };
     }
 
-    family.children = (family.children || []).filter(
-      (child) => child.toString() !== userString
+    if (familyChildIds.includes(userString)) {
+      update.$pull = {
+        children: userId,
+      };
+    }
+
+    const remainingFather =
+      family.father?.toString() === userString
+        ? null
+        : family.father;
+
+    const remainingMother =
+      family.mother?.toString() === userString
+        ? null
+        : family.mother;
+
+    const remainingChildren = familyChildIds.filter(
+      (childId) => childId !== userString
     );
 
     const isEmpty =
-      !family.father &&
-      !family.mother &&
-      family.children.length === 0;
+      !remainingFather &&
+      !remainingMother &&
+      remainingChildren.length === 0;
 
     if (isEmpty) {
       await Family.findByIdAndDelete(family._id);
     } else {
-      await family.save();
-      await syncFamilyRelationships(family);
+      await Family.updateOne(
+        { _id: family._id },
+        update
+      );
+
+      const updatedFamily = await Family.findById(family._id);
+
+      if (updatedFamily) {
+        await syncFamilyRelationships(updatedFamily);
+      }
     }
 
     return res.status(200).json({
