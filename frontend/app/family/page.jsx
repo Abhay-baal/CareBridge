@@ -4,6 +4,7 @@ import { getGenderAvatar } from "@/utils/genderAvatar";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import {
   createFamily,
@@ -37,6 +38,7 @@ const getLoggedInRole = () => {
 };
 
 export default function FamilyPage() {
+  const router = useRouter();
   const [mode, setMode] = useState(null);
   const [position, setPosition] = useState("");
   const [familyCode, setFamilyCode] = useState("");
@@ -52,6 +54,13 @@ export default function FamilyPage() {
 
   useEffect(() => {
     const currentRole = getLoggedInRole();
+
+    if (!currentRole) {
+      setRole(null);
+      setLoading(false);
+      router.replace("/login");
+      return;
+    }
 
     const loadFamily = async () => {
       try {
@@ -69,7 +78,7 @@ export default function FamilyPage() {
     };
 
     loadFamily();
-  }, []);
+  }, [router]);
 
   const reset = () => {
     setMode(null);
@@ -80,6 +89,11 @@ export default function FamilyPage() {
 
   const handleCreate = async () => {
     setError("");
+
+    if (!localStorage.getItem("token")) {
+      router.replace("/login");
+      return;
+    }
 
     if (role === "parent" && !position) {
       setError("Please choose Father or Mother.");
@@ -108,6 +122,11 @@ export default function FamilyPage() {
 
   const handleJoin = async () => {
     setError("");
+
+    if (!localStorage.getItem("token")) {
+      router.replace("/login");
+      return;
+    }
 
     if (!familyCode.trim()) {
       setError("Please enter your family code.");
@@ -156,6 +175,32 @@ export default function FamilyPage() {
     );
   }
 
+  if (!role) {
+    return (
+      <main className="min-h-screen bg-[#fffafb] px-4 py-5">
+        <div className="mx-auto max-w-md">
+          <div className="rounded-[28px] border border-[#f3e3e5] bg-white p-6 text-center shadow-[0_8px_24px_rgba(74,55,61,0.05)]">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#fff0f2] text-3xl">
+              🔒
+            </div>
+            <h1 className="mt-4 text-2xl font-black text-[#182033]">
+              Please log in
+            </h1>
+            <p className="mt-2 text-sm font-medium text-[#b38c94]">
+              You need an active session to view or create a family.
+            </p>
+            <Link
+              href="/login"
+              className="mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-[#FF8FA3] px-4 py-3 text-sm font-black text-white transition hover:bg-[#FF7F96]"
+            >
+              Go to login
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   if (family) {
     return (
       <main className="min-h-screen bg-[#fffafb] px-4 py-5">
@@ -194,14 +239,14 @@ export default function FamilyPage() {
 
             <div className="mt-2 flex items-center justify-between gap-3">
               <p className="text-3xl font-black tracking-[0.2em] text-gray-900">
-                {family.familyCode}
+                {family?.familyCode}
               </p>
 
               <button
                 type="button"
                 onClick={() =>
                   navigator.clipboard?.writeText(
-                    family.familyCode
+                    family?.familyCode
                   )
                 }
                 className="rounded-xl bg-white/80 px-3 py-2 text-xs font-bold text-gray-900 shadow-sm transition hover:bg-white"
@@ -222,7 +267,7 @@ export default function FamilyPage() {
 
             <div className="mt-4 space-y-3">
 
-              {family.father && (
+              {family?.father && (
                 <div className="flex items-center gap-3 rounded-xl border border-[#f8eaec] bg-[#fffafb] p-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#fff0f2] text-xl">
                     {getGenderAvatar(family?.father)}
@@ -230,7 +275,7 @@ export default function FamilyPage() {
 
                   <div>
                     <p className="text-sm font-black text-[#182033]">
-                      {family.father.fullName}
+                      {family?.father.fullName}
                     </p>
                     <p className="text-xs font-semibold text-rose-400">
                       Father
@@ -239,7 +284,7 @@ export default function FamilyPage() {
                 </div>
               )}
 
-              {family.mother && (
+              {family?.mother && (
                 <div className="flex items-center gap-3 rounded-xl border border-[#f8eaec] bg-[#fffafb] p-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#fff0f2] text-xl">
                     {getGenderAvatar(family?.mother)}
@@ -247,7 +292,7 @@ export default function FamilyPage() {
 
                   <div>
                     <p className="text-sm font-black text-[#182033]">
-                      {family.mother.fullName}
+                      {family?.mother.fullName}
                     </p>
                     <p className="text-xs font-semibold text-rose-400">
                       Mother
