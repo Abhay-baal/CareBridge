@@ -20,6 +20,7 @@ const providerRoutes = require("./routes/providerRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const settingsRoutes = require("./routes/settingsRoutes");
 const ownerRoutes = require("./routes/ownerRoutes");
+const supportRoutes = require("./routes/supportRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 
 const app = express();
@@ -137,5 +138,6 @@ app.use("/api/providers", providerRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/owner", ownerRoutes);
+app.use("/api/support", supportRoutes);
 app.use("/api/notifications", notificationRoutes);
 module.exports = app;
