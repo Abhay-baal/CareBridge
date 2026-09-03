@@ -26,6 +26,8 @@ import ChildNavigation from "@/components/child/ChildNavigation";
 
 import {
   changePassword,
+  createSupportTicket,
+  getMySupportTickets,
   getSettings,
   updateAccount,
   updateLanguage,
@@ -33,6 +35,7 @@ import {
   updatePrivacy,
   updateProfile,
 } from "@/services/settingsService";
+
 import {
   enableAppNotifications,
 } from "@/services/notificationService";
@@ -183,6 +186,355 @@ const Modal = ({
     </div>
   </div>
 );
+
+
+function SupportModal({ user, onClose }) {
+  const [view, setView] = useState("new");
+  const [category, setCategory] = useState("problem");
+  const [subject, setSubject] = useState("");
+  const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState("medium");
+  const [submitting, setSubmitting] = useState(false);
+  const [tickets, setTickets] = useState([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const [error, setError] = useState("");
+
+  const email = String(user?.email || "").trim();
+
+  const validEmail =
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  const loadTickets = async () => {
+    try {
+      setLoadingTickets(true);
+      setError("");
+
+      const response = await getMySupportTickets();
+
+      setTickets(response?.data || []);
+    } catch (err) {
+      setError(
+        err?.message ||
+          "Unable to load support requests."
+      );
+    } finally {
+      setLoadingTickets(false);
+    }
+  };
+
+  useEffect(() => {
+    if (view === "tickets") {
+      loadTickets();
+    }
+  }, [view]);
+
+  const submit = async (event) => {
+    event.preventDefault();
+
+    if (!validEmail) {
+      setError(
+        "Please add a valid email address to your account before contacting support."
+      );
+      return;
+    }
+
+    if (!subject.trim() || !description.trim()) {
+      setError(
+        "Please complete the subject and description."
+      );
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setError("");
+
+      await createSupportTicket({
+        category,
+        subject: subject.trim(),
+        description: description.trim(),
+        priority,
+      });
+
+      setSubject("");
+      setDescription("");
+      setCategory("problem");
+      setPriority("medium");
+      setView("tickets");
+    } catch (err) {
+      setError(
+        err?.message ||
+          "Unable to submit your support request."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal
+      title="Help & Support"
+      onClose={onClose}
+    >
+      <div className="space-y-5">
+        <div className="rounded-2xl bg-[#faf8fc] p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#f8f1ff] text-[#9b72c5]">
+              <CircleHelp className="h-5 w-5" />
+            </div>
+
+            <div>
+              <p className="text-sm font-semibold text-gray-900">
+                We&apos;re here to help.
+              </p>
+
+              <p className="mt-1 text-xs leading-5 text-gray-500">
+                Report a problem, ask a question,
+                share feedback, or suggest an
+                improvement.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 rounded-2xl bg-gray-100 p-1">
+          <button
+            type="button"
+            onClick={() => setView("new")}
+            className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${
+              view === "new"
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-500"
+            }`}
+          >
+            Contact Support
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setView("tickets")}
+            className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${
+              view === "tickets"
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-500"
+            }`}
+          >
+            My Requests
+          </button>
+        </div>
+
+        {view === "new" ? (
+          <form
+            onSubmit={submit}
+            className="space-y-4"
+          >
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-gray-700">
+                Your email
+              </label>
+
+              <div
+                className={`rounded-xl border px-3 py-3 text-sm ${
+                  validEmail
+                    ? "border-gray-200 bg-gray-50 text-gray-700"
+                    : "border-red-200 bg-red-50 text-red-600"
+                }`}
+              >
+                {email || "No email address available"}
+              </div>
+
+              {!validEmail && (
+                <p className="mt-1.5 text-[11px] leading-4 text-red-500">
+                  Add a valid email address in
+                  Account & Security so CareBridge
+                  can reply to you.
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-gray-700">
+                What can we help with?
+              </label>
+
+              <select
+                value={category}
+                onChange={(event) =>
+                  setCategory(event.target.value)
+                }
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm outline-none focus:border-[#9b72c5]"
+              >
+                <option value="problem">
+                  Report a problem
+                </option>
+                <option value="error">
+                  Report an error
+                </option>
+                <option value="suggestion">
+                  Suggest an improvement
+                </option>
+                <option value="feedback">
+                  Share feedback
+                </option>
+                <option value="question">
+                  Ask a question
+                </option>
+                <option value="other">
+                  Other
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-gray-700">
+                Subject
+              </label>
+
+              <input
+                value={subject}
+                onChange={(event) =>
+                  setSubject(event.target.value)
+                }
+                maxLength={200}
+                placeholder="Briefly describe the issue"
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm outline-none focus:border-[#9b72c5]"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-gray-700">
+                Details
+              </label>
+
+              <textarea
+                value={description}
+                onChange={(event) =>
+                  setDescription(event.target.value)
+                }
+                maxLength={5000}
+                rows={5}
+                placeholder="Tell us what happened..."
+                className="w-full resize-none rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm outline-none focus:border-[#9b72c5]"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-gray-700">
+                Priority
+              </label>
+
+              <div className="grid grid-cols-4 gap-1.5">
+                {[
+                  ["low", "Low"],
+                  ["medium", "Normal"],
+                  ["high", "High"],
+                  ["urgent", "Urgent"],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() =>
+                      setPriority(value)
+                    }
+                    className={`rounded-xl border px-2 py-2 text-[11px] font-semibold transition ${
+                      priority === value
+                        ? "border-[#9b72c5] bg-[#f8f1ff] text-[#7d579f]"
+                        : "border-gray-200 bg-white text-gray-500"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {error && (
+              <div className="rounded-xl bg-red-50 px-3 py-3 text-xs leading-5 text-red-600">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting || !validEmail}
+              className="w-full rounded-xl bg-[#9b72c5] px-4 py-3 text-sm font-semibold text-white shadow-sm transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {submitting
+                ? "Submitting..."
+                : "Send to CareBridge Support"}
+            </button>
+          </form>
+        ) : (
+          <div className="space-y-3">
+            {loadingTickets ? (
+              <>
+                <div className="h-20 animate-pulse rounded-2xl bg-gray-100" />
+                <div className="h-20 animate-pulse rounded-2xl bg-gray-100" />
+              </>
+            ) : tickets.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-gray-200 p-6 text-center">
+                <p className="text-sm font-semibold text-gray-800">
+                  No support requests yet
+                </p>
+
+                <p className="mt-1 text-xs leading-5 text-gray-500">
+                  Your submitted requests will
+                  appear here.
+                </p>
+              </div>
+            ) : (
+              tickets.map((ticket) => (
+                <div
+                  key={ticket._id}
+                  className="rounded-2xl border border-gray-200 bg-white p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-semibold text-[#9b72c5]">
+                        {ticket.ticketId}
+                      </p>
+
+                      <p className="mt-1 text-sm font-semibold text-gray-900">
+                        {ticket.subject}
+                      </p>
+                    </div>
+
+                    <span className="rounded-full bg-gray-100 px-2 py-1 text-[10px] font-semibold capitalize text-gray-600">
+                      {String(ticket.status || "")
+                        .replace("_", " ")}
+                    </span>
+                  </div>
+
+                  <p className="mt-2 line-clamp-2 text-xs leading-5 text-gray-500">
+                    {ticket.description}
+                  </p>
+
+                  {ticket.ownerReply && (
+                    <div className="mt-3 rounded-xl bg-[#faf8fc] p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-[#9b72c5]">
+                        CareBridge reply
+                      </p>
+
+                      <p className="mt-1 text-xs leading-5 text-gray-600">
+                        {ticket.ownerReply}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+
+            {error && (
+              <div className="rounded-xl bg-red-50 px-3 py-3 text-xs text-red-600">
+                {error}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -1050,26 +1402,10 @@ export default function SettingsPage() {
 
       {/* Help */}
       {modal === "help" && (
-        <Modal
-          title="Help & Support"
+        <SupportModal
+          user={user}
           onClose={() => setModal(null)}
-        >
-          <div className="rounded-2xl bg-[#faf8fc] p-5 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f8f1ff] text-[#9b72c5]">
-              <CircleHelp className="h-6 w-6" />
-            </div>
-
-            <p className="text-sm font-semibold text-gray-900">
-              Need help with CareBridge?
-            </p>
-
-            <p className="mt-2 text-xs leading-5 text-gray-500">
-              Support functionality can be connected
-              here later without changing the Settings
-              layout.
-            </p>
-          </div>
-        </Modal>
+        />
       )}
 
       {/* About */}

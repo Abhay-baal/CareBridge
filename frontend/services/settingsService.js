@@ -82,3 +82,41 @@ export const updatePrivacy = (payload) =>
     method: "PUT",
     body: JSON.stringify(payload),
   });
+
+export const createSupportTicket = (payload) =>
+  requestSupport("/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const getMySupportTickets = () =>
+  requestSupport("/mine");
+
+const requestSupport = async (endpoint, options = {}) => {
+  const token = getToken();
+
+  const response = await fetch(
+    `${API_URL.replace(/\/settings$/, "")}/support${endpoint}`,
+    {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token
+          ? { Authorization: `Bearer ${token}` }
+          : {}),
+        ...(options.headers || {}),
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data?.message ||
+        "Something went wrong"
+    );
+  }
+
+  return data;
+};
