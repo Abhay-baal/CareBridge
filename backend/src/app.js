@@ -13,7 +13,6 @@ const childRoutes = require("./routes/childRoutes");
 const emergencyRoutes = require("./routes/emergencyRoutes");
 const emergencyEventRoutes = require("./routes/emergencyEventRoutes");
 const locationRoutes = require("./routes/locationRoutes");
-const healthRecordRoutes = require("./routes/healthRecordRoutes");
 const parentChildRoutes = require("./routes/parentChildRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const providerRoutes = require("./routes/providerRoutes");
@@ -43,7 +42,7 @@ app.use(
 // Global Rate Limiter - 100 requests per 15 minutes
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window
+  max: 100000, // 100,000 requests per 15-minute window
   message: "Too many requests from this IP, please try again later.",
   // CORS preflight requests should not consume API rate-limit quota
   skip: (req) => req.method === "OPTIONS",
@@ -129,7 +128,6 @@ app.use("/api/child", childRoutes);
 app.use("/api/emergency", emergencyRoutes);
 app.use("/api/emergency-events", emergencyEventRoutes);
 app.use("/api/location", locationRoutes);
-app.use("/api/health-records", healthRecordRoutes);
 app.use("/api/parent-child", parentChildRoutes);
 app.use("/api/family", familyRoutes);
 

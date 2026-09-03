@@ -19,12 +19,6 @@ import {
 
 const features = [
   {
-    icon: FileHeart,
-    title: "Health Records",
-    description:
-      "Keep important medical reports organized, accessible, and securely stored.",
-  },
-  {
     icon: Activity,
     title: "Care Plans",
     description:
@@ -57,7 +51,6 @@ const features = [
 ];
 
 const problems = [
-  "Medical records are often scattered across different places.",
   "Families can struggle to keep track of care plans and appointments.",
   "Important emergency information may not be immediately accessible.",
   "Caregivers need a simpler way to stay connected with their loved one's healthcare.",
@@ -162,9 +155,8 @@ export default function Home() {
             </h1>
 
             <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl">
-              CareBridge helps families manage healthcare information, care
-              plans, appointments, medical records, emergency contacts, and
-              more — all in one connected platform.
+              CareBridge helps families stay connected, manage care plans, appointments,
+              emergency contacts, and more — all in one connected platform.
             </p>
 
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -251,13 +243,6 @@ export default function Home() {
                       <p className="text-xs text-slate-500">Care tasks</p>
                     </div>
 
-                    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                      <FileHeart className="text-teal-600" size={21} />
-                      <p className="mt-3 text-2xl font-bold text-slate-900">
-                        12
-                      </p>
-                      <p className="text-xs text-slate-500">Health records</p>
-                    </div>
                   </div>
 
                   <div className="rounded-2xl border border-slate-100 p-4">
@@ -442,13 +427,6 @@ export default function Home() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-2xl bg-slate-50 p-4">
-                      <FileHeart size={20} className="text-teal-600" />
-                      <p className="mt-3 text-xs font-semibold">
-                        Health Records
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl bg-slate-50 p-4">
                       <Siren size={20} className="text-teal-600" />
                       <p className="mt-3 text-xs font-semibold">
                         Emergency
@@ -501,7 +479,6 @@ export default function Home() {
 
               <div className="mt-7 space-y-3">
                 {[
-                  "Manage health records",
                   "Track care plans",
                   "Manage appointments",
                   "Update medical profile",
