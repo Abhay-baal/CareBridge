@@ -6,7 +6,6 @@ import {
   HeartPulse,
   House,
   MessageCircle,
-  Siren,
   UserRound,
 } from "lucide-react";
 
@@ -25,11 +24,6 @@ const navigation = [
     href: "/child/chat",
     label: "Chat",
     icon: MessageCircle,
-  },
-  {
-    href: "/child/emergency",
-    label: "Emergency",
-    icon: Siren,
   },
   {
     href: "/settings",
@@ -56,9 +50,7 @@ export default function ChildNavigation() {
               href={item.href}
               className={`apple-bottom-nav__item motion-press flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-semibold ${
                 active
-                  ? item.label === "Emergency"
-                    ? "apple-bottom-nav__item--emergency-active"
-                    : "apple-bottom-nav__item--active"
+                  ? "apple-bottom-nav__item--active"
                   : ""
               }`}
               aria-current={active ? "page" : undefined}
